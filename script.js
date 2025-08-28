@@ -1226,9 +1226,12 @@ class LogisticsManager {
         tbody.innerHTML = '';
 
         if (productTransactions.length === 0) {
+            console.log('해당 기간의 입출고 내역이 없음');
             tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">해당 기간의 입출고 내역이 없습니다.</td></tr>';
             return;
         }
+
+        console.log('표시할 거래 내역 수:', productTransactions.length);
 
         productTransactions.forEach(transaction => {
             const row = document.createElement('tr');
@@ -1358,12 +1361,20 @@ class LogisticsManager {
         this.updateScannedProductsDisplay();
         this.updateProcessButtons();
         
-        // 스캔 완료 피드백
+        // 바코드 입력 필드 초기화
         const barcodeInput = document.getElementById('barcodeInput');
+        barcodeInput.value = '';
+        
+        // 스캔 완료 피드백
         barcodeInput.style.borderColor = '#27ae60';
         setTimeout(() => {
             barcodeInput.style.borderColor = '#3498db';
         }, 500);
+        
+        console.log('바코드 스캔 완료:', { 
+            product: product.name, 
+            scannedProductsCount: this.scannedProducts.length 
+        });
     }
 
     // 스캔된 상품 목록 표시 업데이트
@@ -1433,11 +1444,25 @@ class LogisticsManager {
     updateProcessButtons() {
         const hasProducts = this.scannedProducts.length > 0;
         
-        document.getElementById('processInBtn').style.display = 
-            (hasProducts && this.currentTransactionType === 'in') ? 'block' : 'none';
-        document.getElementById('processOutBtn').style.display = 
-            (hasProducts && this.currentTransactionType === 'out') ? 'block' : 'none';
-        document.getElementById('clearListBtn').style.display = hasProducts ? 'block' : 'none';
+        console.log('처리 버튼 업데이트:', { 
+            hasProducts, 
+            currentTransactionType: this.currentTransactionType,
+            scannedProductsCount: this.scannedProducts.length 
+        });
+        
+        const processInBtn = document.getElementById('processInBtn');
+        const processOutBtn = document.getElementById('processOutBtn');
+        const clearListBtn = document.getElementById('clearListBtn');
+        
+        if (processInBtn) {
+            processInBtn.style.display = hasProducts ? 'block' : 'none';
+        }
+        if (processOutBtn) {
+            processOutBtn.style.display = hasProducts ? 'block' : 'none';
+        }
+        if (clearListBtn) {
+            clearListBtn.style.display = hasProducts ? 'block' : 'none';
+        }
     }
 
     // 일괄 거래 처리
