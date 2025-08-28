@@ -172,9 +172,16 @@ class LogisticsManager {
                 this.updateTransactionHistory();
                 this.updatePackingHistory();
                 this.updateTaskDisplay();
+                console.log('상품 선택기 업데이트 전 재고 데이터:', this.inventory);
                 this.updateProductSelectors();
                 console.log('UI 업데이트 완료');
             }, 100);
+            
+            // 추가로 3초 후에도 한 번 더 업데이트 (Supabase 데이터 완전 로드 보장)
+            setTimeout(() => {
+                console.log('지연 상품 선택기 업데이트...');
+                this.updateProductSelectors();
+            }, 3000);
             
         } catch (error) {
             console.error('Supabase에서 데이터 로드 실패:', error);
@@ -398,6 +405,11 @@ class LogisticsManager {
         document.getElementById('packingBarcode').addEventListener('input', (e) => this.handlePackingBarcodeInput(e.target.value));
         document.getElementById('packBtn').addEventListener('click', () => this.processPacking());
         document.getElementById('shipBtn').addEventListener('click', () => this.processShipping());
+        document.getElementById('refreshPackingBtn').addEventListener('click', () => {
+            console.log('상품목록 수동 새로고침 시작');
+            this.updateProductSelectors();
+            alert('상품목록을 새로고침했습니다.');
+        });
 
         // 업무 루틴
         document.getElementById('addTaskBtn').addEventListener('click', () => this.showTaskModal());
@@ -932,25 +944,45 @@ class LogisticsManager {
 
     // 상품 선택기 업데이트
     updateProductSelectors() {
-        const selectors = ['packingProduct']; // productSelect 제거 (새 시스템에서는 불필요)
+        const selectors = ['packingProduct']; 
+        
+        console.log('상품 선택기 업데이트 시작, 재고 데이터:', this.inventory);
         
         // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
         if (!this.inventory) {
             this.inventory = [];
+            console.log('재고 데이터가 없어서 빈 배열로 초기화');
         }
         
         selectors.forEach(selectorId => {
             const selector = document.getElementById(selectorId);
-            if (!selector) return;
+            if (!selector) {
+                console.error(`선택기를 찾을 수 없음: ${selectorId}`);
+                return;
+            }
             
+            console.log(`${selectorId} 선택기 업데이트 중...`);
             selector.innerHTML = '<option value="">상품을 선택하세요</option>';
+            
+            if (this.inventory.length === 0) {
+                console.log('재고 데이터가 비어있음');
+                const noDataOption = document.createElement('option');
+                noDataOption.value = '';
+                noDataOption.textContent = '재고 데이터가 없습니다';
+                noDataOption.disabled = true;
+                selector.appendChild(noDataOption);
+                return;
+            }
             
             this.inventory.forEach(product => {
                 const option = document.createElement('option');
                 option.value = product.id;
-                option.textContent = `${product.name} (${product.barcode})`;
+                option.textContent = `${product.name} (${product.barcode}) - 재고: ${product.quantity}`;
                 selector.appendChild(option);
+                console.log(`상품 추가됨: ${product.name} (ID: ${product.id})`);
             });
+            
+            console.log(`${selectorId} 선택기 업데이트 완료, 총 ${this.inventory.length}개 상품`);
         });
     }
 
@@ -1263,16 +1295,45 @@ class LogisticsManager {
         const productId = document.getElementById('packingProduct').value;
         const quantity = parseInt(document.getElementById('packingQuantity').value) || 0;
         
-        if (!productId || quantity <= 0) {
-            alert('상품과 수량을 올바르게 입력해주세요.');
+        console.log('포장 처리 시작:', { productId, quantity });
+        console.log('현재 재고 데이터:', this.inventory);
+        
+        if (!productId || productId === '') {
+            alert('상품을 선택해주세요.');
+            console.log('상품이 선택되지 않음');
+            return;
+        }
+        
+        if (quantity <= 0) {
+            alert('포장 수량을 1 이상으로 입력해주세요.');
+            console.log('수량이 0 이하');
+            return;
+        }
+        
+        // 재고 데이터 확인
+        if (!this.inventory || this.inventory.length === 0) {
+            alert('재고 데이터가 없습니다. 먼저 상품을 등록해주세요.');
+            console.log('재고 데이터가 비어있음');
             return;
         }
         
         const product = this.inventory.find(p => p.id === parseInt(productId));
+        console.log('선택된 상품:', product);
+        
         if (!product) {
-            alert('상품을 찾을 수 없습니다.');
+            alert(`상품을 찾을 수 없습니다. (ID: ${productId})`);
+            console.log('상품을 찾을 수 없음, 사용 가능한 상품들:', this.inventory.map(p => ({id: p.id, name: p.name})));
             return;
         }
+        
+        // 재고 수량 확인
+        if (product.quantity < quantity) {
+            alert(`재고가 부족합니다. 현재 재고: ${product.quantity}개, 요청: ${quantity}개`);
+            return;
+        }
+        
+        // 재고에서 차감 (포장할 때 재고 차감)
+        product.quantity -= quantity;
         
         // 그로스 포장 수량 증가
         product.gross_qty = (product.gross_qty || 0) + quantity;
@@ -1280,14 +1341,17 @@ class LogisticsManager {
         // 포장 기록 추가
         const packingRecord = {
             id: Date.now(),
-            productId: product.id,
-            productName: product.name,
+            product_id: product.id, // Supabase 스키마에 맞춤
+            productId: product.id, // 로컬 호환성
+            product_name: product.name, // Supabase 스키마에 맞춤
+            productName: product.name, // 로컬 호환성
             quantity,
             status: '포장완료',
             timestamp: new Date().toLocaleString('ko-KR')
         };
         
         this.packingRecords.push(packingRecord);
+        console.log('포장 기록 추가:', packingRecord);
         
         try {
             await this.saveData();
@@ -1299,7 +1363,8 @@ class LogisticsManager {
             document.getElementById('packingProduct').value = '';
             document.getElementById('packingQuantity').value = '1';
             
-            alert(`포장 처리 완료! 그로스 포장 수량이 ${quantity}개 증가했습니다.`);
+            alert(`포장 처리 완료!\n- 재고 ${quantity}개 차감\n- 그로스 포장 ${quantity}개 증가\n- 현재 재고: ${product.quantity}개\n- 그로스 포장: ${product.gross_qty}개`);
+            console.log('포장 처리 완료');
         } catch (error) {
             console.error('포장 처리 오류:', error);
             alert('포장 처리 중 오류가 발생했습니다.');
