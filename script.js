@@ -15,6 +15,7 @@ class LogisticsManager {
         this.tasks = [];
         this.scannedProducts = []; // 스캔된 상품 목록
         this.currentTransactionType = 'in'; // 현재 거래 유형
+        this.completionAlertShown = false; // 완료 알림 표시 여부
         
         this.initSupabase();
         this.init();
@@ -358,9 +359,31 @@ class LogisticsManager {
         document.getElementById('saveProductBtn').addEventListener('click', () => this.saveProduct());
         document.getElementById('cancelProductBtn').addEventListener('click', () => this.hideProductModal());
 
-        // 입출고 - 새로운 시스템
+        // 입출고 - 새로운 시스템 (자동 스캔)
+        let barcodeTimeout;
+        document.getElementById('barcodeInput').addEventListener('input', (e) => {
+            const barcode = e.target.value.trim();
+            
+            // 이전 타임아웃 클리어
+            if (barcodeTimeout) {
+                clearTimeout(barcodeTimeout);
+            }
+            
+            // 바코드가 3자리 이상이면 자동 처리 (500ms 딜레이)
+            if (barcode.length >= 3) {
+                barcodeTimeout = setTimeout(() => {
+                    this.handleBarcodeScanned(barcode);
+                    e.target.value = ''; // 입력 필드 초기화
+                }, 500);
+            }
+        });
+        
+        // 엔터키로도 처리 가능
         document.getElementById('barcodeInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                if (barcodeTimeout) {
+                    clearTimeout(barcodeTimeout);
+                }
                 this.handleBarcodeScanned(e.target.value);
                 e.target.value = '';
             }
@@ -474,8 +497,11 @@ class LogisticsManager {
             option.textContent = `${year}년`;
             yearFilter.appendChild(option);
         }
-        // 초기값을 "전체"로 설정하여 모든 데이터 표시
-        yearFilter.value = '';
+        // 현재 날짜로 기본 설정
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        yearFilter.value = currentYear;
 
         // 월 필터
         monthFilter.innerHTML = '<option value="">전체</option>';
@@ -485,11 +511,20 @@ class LogisticsManager {
             option.textContent = `${month}월`;
             monthFilter.appendChild(option);
         }
-        // 초기값을 "전체"로 설정
-        monthFilter.value = '';
+        // 현재 월로 설정
+        monthFilter.value = currentMonth;
 
         // 일 필터
         this.updateDayFilter();
+        
+        // 현재 일로 설정 (일 필터 업데이트 후)
+        setTimeout(() => {
+            const dayFilter = document.getElementById('dayFilter');
+            const currentDay = now.getDate();
+            if (dayFilter) {
+                dayFilter.value = currentDay;
+            }
+        }, 100);
         
         // 년/월 변경 시 일 필터 업데이트
         yearFilter.addEventListener('change', () => this.updateDayFilter());
@@ -1204,7 +1239,20 @@ class LogisticsManager {
         if (barcode.length > 3) {
             const product = this.inventory.find(p => p.barcode === barcode);
             if (product) {
-                document.getElementById('packingProduct').value = product.id;
+                const packingProductSelect = document.getElementById('packingProduct');
+                if (packingProductSelect) {
+                    // 옵션이 존재하는지 확인하고 설정
+                    const option = packingProductSelect.querySelector(`option[value="${product.id}"]`);
+                    if (option) {
+                        packingProductSelect.value = product.id;
+                    } else {
+                        // 옵션이 없으면 상품 선택기 업데이트 후 설정
+                        this.updateProductSelectors();
+                        setTimeout(() => {
+                            packingProductSelect.value = product.id;
+                        }, 100);
+                    }
+                }
             }
         }
     }
@@ -1473,9 +1521,15 @@ class LogisticsManager {
         progressPercentageEl.textContent = `${progressPercentage}%`;
         progressStatusEl.textContent = `${completedTasks}/${totalTasks} 완료`;
         
-        // 완료 시 축하 효과
+        // 완료 시 축하 효과 (중복 방지)
         if (completedTasks === totalTasks && totalTasks > 0) {
-            this.celebrateCompletion();
+            if (!this.completionAlertShown) {
+                this.celebrateCompletion();
+                this.completionAlertShown = true;
+            }
+        } else {
+            // 완료되지 않은 상태로 돌아가면 알림 플래그 리셋
+            this.completionAlertShown = false;
         }
     }
 
