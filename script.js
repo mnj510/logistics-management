@@ -474,13 +474,17 @@ class LogisticsManager {
         
         const now = new Date();
         const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
         
-        // 년도 필터
+        // 년도 필터 (2025-2035년)
         yearFilter.innerHTML = '<option value="">전체 년도</option>';
-        for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+        for (let year = 2025; year <= 2035; year++) {
             const option = document.createElement('option');
             option.value = year;
             option.textContent = `${year}년`;
+            if (year === currentYear) {
+                option.selected = true; // 현재 년도 자동 선택
+            }
             yearFilter.appendChild(option);
         }
         
@@ -490,6 +494,9 @@ class LogisticsManager {
             const option = document.createElement('option');
             option.value = month;
             option.textContent = `${month}월`;
+            if (month === currentMonth) {
+                option.selected = true; // 현재 월 자동 선택
+            }
             monthFilter.appendChild(option);
         }
         
@@ -501,6 +508,8 @@ class LogisticsManager {
             option.textContent = `${day}일`;
             dayFilter.appendChild(option);
         }
+        
+        console.log(`입출고 내역 필터 초기화: ${currentYear}년 ${currentMonth}월로 자동 설정`);
     }
     
     // 포장 내역 필터 초기화
@@ -513,13 +522,18 @@ class LogisticsManager {
         
         const now = new Date();
         const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const currentDay = now.getDate();
         
-        // 년도 필터
+        // 년도 필터 (2025-2035년)
         yearFilter.innerHTML = '<option value="">전체 년도</option>';
-        for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+        for (let year = 2025; year <= 2035; year++) {
             const option = document.createElement('option');
             option.value = year;
             option.textContent = `${year}년`;
+            if (year === currentYear) {
+                option.selected = true; // 현재 년도 자동 선택
+            }
             yearFilter.appendChild(option);
         }
         
@@ -529,6 +543,9 @@ class LogisticsManager {
             const option = document.createElement('option');
             option.value = month;
             option.textContent = `${month}월`;
+            if (month === currentMonth) {
+                option.selected = true; // 현재 월 자동 선택
+            }
             monthFilter.appendChild(option);
         }
         
@@ -540,6 +557,8 @@ class LogisticsManager {
             option.textContent = `${day}일`;
             dayFilter.appendChild(option);
         }
+        
+        console.log(`포장 내역 필터 초기화: ${currentYear}년 ${currentMonth}월로 자동 설정`);
     }
 
     // 날짜/시간 선택기 초기화
@@ -1680,7 +1699,7 @@ class LogisticsManager {
         tbody.innerHTML = '';
         
         if (recordsToShow.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">포장 내역이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">포장 내역이 없습니다.</td></tr>';
             return;
         }
         
@@ -1695,14 +1714,6 @@ class LogisticsManager {
                     </span>
                 </td>
                 <td>${record.quantity}</td>
-                <td>
-                    ${record.status === '포장완료' ? 
-                        `<button class="btn btn-warning" onclick="logisticsManager.shipSingleItem(${record.id})">
-                            <i class="fas fa-shipping-fast"></i> 출고
-                        </button>` : 
-                        '-'
-                    }
-                </td>
             `;
             tbody.appendChild(row);
         });
@@ -1737,32 +1748,7 @@ class LogisticsManager {
         this.updatePackingHistory(filteredRecords);
     }
 
-    // 단일 상품 출고
-    async shipSingleItem(recordId) {
-        const record = this.packingRecords.find(r => r.id === recordId);
-        if (!record) return;
-        
-        record.status = '출고완료';
-        record.shippedAt = new Date().toLocaleString('ko-KR');
-        
-        // 그로스 포장 수량에서 차감
-        const product = this.inventory.find(p => p.id === (record.product_id || record.productId));
-        if (product && product.gross_qty >= record.quantity) {
-            product.gross_qty -= record.quantity;
-            console.log(`단일 출고 처리: ${product.name} 그로스 포장 ${record.quantity}개 차감`);
-        }
-        
-        try {
-            await this.saveData();
-            this.updateInventoryDisplay();
-            this.updatePackingHistory();
-            
-            alert('출고 처리가 완료되었습니다.');
-        } catch (error) {
-            console.error('출고 처리 오류:', error);
-            alert('출고 처리 중 오류가 발생했습니다.');
-        }
-    }
+
 
     // 업무 모달 표시
     showTaskModal(task = null) {
