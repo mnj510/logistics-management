@@ -7,18 +7,43 @@ class LogisticsManager {
         this.currentEditingTask = null;
         this.supabase = null;
         
+        // 데이터 초기화
+        this.attendanceRecords = [];
+        this.inventory = [];
+        this.transactions = [];
+        this.packingRecords = [];
+        this.tasks = [];
+        
         this.initSupabase();
         this.init();
-        this.loadData();
         this.setupEventListeners();
         this.initializeTimeSelector();
         this.initializeDateFilters();
-        this.updateAttendanceDisplay();
-        this.updateInventoryDisplay();
-        this.updateTransactionHistory();
-        this.updatePackingHistory();
-        this.updateTaskDisplay();
-        this.updateProductSelectors();
+        
+        // 비동기 데이터 로딩 및 UI 업데이트
+        this.initializeApp();
+    }
+
+    async initializeApp() {
+        try {
+            await this.loadData();
+            this.updateAttendanceDisplay();
+            this.updateInventoryDisplay();
+            this.updateTransactionHistory();
+            this.updatePackingHistory();
+            this.updateTaskDisplay();
+            this.updateProductSelectors();
+        } catch (error) {
+            console.error('앱 초기화 오류:', error);
+            // 오류 발생 시 로컬 스토리지에서 로드
+            this.loadFromLocalStorage();
+            this.updateAttendanceDisplay();
+            this.updateInventoryDisplay();
+            this.updateTransactionHistory();
+            this.updatePackingHistory();
+            this.updateTaskDisplay();
+            this.updateProductSelectors();
+        }
     }
 
     // Supabase 초기화
@@ -442,9 +467,18 @@ class LogisticsManager {
     // 출퇴근 기록 표시 업데이트
     updateAttendanceDisplay() {
         const tbody = document.querySelector('#attendanceTable tbody');
-        const yearFilter = document.getElementById('yearFilter').value;
-        const monthFilter = document.getElementById('monthFilter').value;
-        const dayFilter = document.getElementById('dayFilter').value;
+        if (!tbody) return;
+        
+        const yearFilter = document.getElementById('yearFilter');
+        const monthFilter = document.getElementById('monthFilter');
+        const dayFilter = document.getElementById('dayFilter');
+        
+        if (!yearFilter || !monthFilter || !dayFilter) return;
+        
+        // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
+        if (!this.attendanceRecords) {
+            this.attendanceRecords = [];
+        }
         
         let filteredRecords = this.attendanceRecords;
         
@@ -593,6 +627,13 @@ class LogisticsManager {
     // 재고 목록 표시 업데이트
     updateInventoryDisplay(searchTerm = '') {
         const tbody = document.querySelector('#inventoryTable tbody');
+        if (!tbody) return;
+        
+        // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
+        if (!this.inventory) {
+            this.inventory = [];
+        }
+        
         let filteredInventory = this.inventory;
         
         if (searchTerm) {
@@ -637,8 +678,15 @@ class LogisticsManager {
     updateProductSelectors() {
         const selectors = ['productSelect', 'packingProduct'];
         
+        // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
+        if (!this.inventory) {
+            this.inventory = [];
+        }
+        
         selectors.forEach(selectorId => {
             const selector = document.getElementById(selectorId);
+            if (!selector) return;
+            
             selector.innerHTML = '<option value="">상품을 선택하세요</option>';
             
             this.inventory.forEach(product => {
@@ -717,6 +765,13 @@ class LogisticsManager {
     // 거래 내역 업데이트
     updateTransactionHistory() {
         const tbody = document.querySelector('#transactionTable tbody');
+        if (!tbody) return;
+        
+        // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
+        if (!this.transactions) {
+            this.transactions = [];
+        }
+        
         const recentTransactions = this.transactions.slice(-20).reverse(); // 최근 20개
         
         tbody.innerHTML = '';
@@ -811,6 +866,13 @@ class LogisticsManager {
     // 포장 내역 업데이트
     updatePackingHistory() {
         const tbody = document.querySelector('#packingTable tbody');
+        if (!tbody) return;
+        
+        // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
+        if (!this.packingRecords) {
+            this.packingRecords = [];
+        }
+        
         const recentRecords = this.packingRecords.slice(-20).reverse(); // 최근 20개
         
         tbody.innerHTML = '';
@@ -917,6 +979,12 @@ class LogisticsManager {
     // 업무 목록 표시 업데이트
     updateTaskDisplay() {
         const taskList = document.getElementById('taskList');
+        if (!taskList) return;
+        
+        // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
+        if (!this.tasks) {
+            this.tasks = [];
+        }
         
         taskList.innerHTML = '';
         this.tasks.forEach(task => {
