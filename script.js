@@ -1146,8 +1146,9 @@ class LogisticsManager {
         if (confirm('정말로 이 상품을 삭제하시겠습니까?')) {
             this.inventory = this.inventory.filter(product => product.id !== id);
             this.saveData();
-                    this.updateInventoryDisplay();
-        this.updateProductSelectors();
+            this.updateInventoryDisplay();
+            this.updateProductSelectors();
+        }
     }
 
     // 상품별 입출고 내역 표시
