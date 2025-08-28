@@ -112,6 +112,19 @@ class LogisticsManager {
         this.transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
         this.packingRecords = JSON.parse(localStorage.getItem('packingRecords') || '[]');
         this.tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+        
+        // 기존 로컬 스토리지 데이터를 Supabase 형식으로 변환
+        this.convertLegacyData();
+    }
+
+    // 기존 데이터를 Supabase 형식으로 변환
+    convertLegacyData() {
+        this.attendanceRecords = this.attendanceRecords.map(record => ({
+            ...record,
+            check_in: record.check_in || record.checkIn,
+            check_out: record.check_out || record.checkOut,
+            work_hours: record.work_hours || record.workHours || 0
+        }));
     }
 
     async loadFromSupabase() {
@@ -400,10 +413,10 @@ class LogisticsManager {
         
         // 오늘 이미 출근했는지 확인
         const existingRecord = this.attendanceRecords.find(record => 
-            record.date === today && record.checkIn
+            record.date === today && (record.check_in || record.checkIn)
         );
         
-        if (existingRecord && !existingRecord.checkOut) {
+        if (existingRecord && !(existingRecord.check_out || existingRecord.checkOut)) {
             alert('이미 출근 처리되었습니다.');
             return;
         }
@@ -537,9 +550,9 @@ class LogisticsManager {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${record.date}</td>
-                <td>${record.checkIn || '-'}</td>
-                <td>${record.checkOut || '-'}</td>
-                <td>${record.workHours ? this.formatMinutes(record.workHours) : '-'}</td>
+                <td>${record.check_in || record.checkIn || '-'}</td>
+                <td>${record.check_out || record.checkOut || '-'}</td>
+                <td>${(record.work_hours || record.workHours) ? this.formatMinutes(record.work_hours || record.workHours) : '-'}</td>
                 <td class="admin-only" style="display: ${this.isAdminMode ? 'table-cell' : 'none'}">
                     <button class="btn btn-danger" onclick="logisticsManager.deleteAttendanceRecord(${record.id})">
                         <i class="fas fa-trash"></i>
@@ -555,8 +568,8 @@ class LogisticsManager {
 
     // 출퇴근 통계 업데이트
     updateAttendanceStats(records) {
-        const completedRecords = records.filter(record => record.checkOut);
-        const totalMinutes = completedRecords.reduce((sum, record) => sum + record.workHours, 0);
+        const completedRecords = records.filter(record => record.check_out || record.checkOut);
+        const totalMinutes = completedRecords.reduce((sum, record) => sum + (record.work_hours || record.workHours || 0), 0);
         const avgMinutes = completedRecords.length > 0 ? Math.round(totalMinutes / completedRecords.length) : 0;
         
         document.getElementById('totalHours').textContent = this.formatMinutes(totalMinutes);
