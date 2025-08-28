@@ -1685,30 +1685,40 @@ class LogisticsManager {
     // 거래 내역 업데이트 (필터링 지원)
     updateTransactionHistory(filteredTransactions = null) {
         const tbody = document.querySelector('#transactionTable tbody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('입출고 내역 테이블 tbody를 찾을 수 없음');
+            return;
+        }
         
         // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
         if (!this.transactions) {
             this.transactions = [];
         }
         
-        console.log('입출고 내역 업데이트:', { 
+        console.log('입출고 내역 업데이트 시작:', { 
             totalTransactions: this.transactions.length, 
             filteredTransactions: filteredTransactions ? filteredTransactions.length : null,
-            transactions: this.transactions 
+            isFiltered: !!filteredTransactions
         });
         
         let transactionsToShow = filteredTransactions || this.transactions.slice(-5).reverse(); // 최근 5개만 표시
         
+        console.log('표시할 거래 내역:', { 
+            표시할데이터수: transactionsToShow.length,
+            데이터: transactionsToShow 
+        });
+        
         tbody.innerHTML = '';
         
         if (transactionsToShow.length === 0) {
+            console.log('표시할 거래 내역이 없음');
             tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">거래 내역이 없습니다.</td></tr>';
             return;
         }
         
         // 개별 거래 기록 모두 표시 (그룹화 제거)
-        transactionsToShow.forEach(transaction => {
+        transactionsToShow.forEach((transaction, index) => {
+            console.log(`거래 내역 ${index + 1} 표시:`, transaction);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${transaction.timestamp}</td>
@@ -1718,6 +1728,8 @@ class LogisticsManager {
             `;
             tbody.appendChild(row);
         });
+        
+        console.log('입출고 내역 표시 완료');
     }
     
     // 상품별 거래 그룹화
@@ -1752,23 +1764,35 @@ class LogisticsManager {
         const monthFilter = document.getElementById('transactionMonthFilter');
         const dayFilter = document.getElementById('transactionDayFilter');
         
+        if (!yearFilter || !monthFilter || !dayFilter) {
+            console.error('입출고 내역 필터 요소를 찾을 수 없음');
+            return;
+        }
+        
         const year = yearFilter.value;
         const month = monthFilter.value;
         const day = dayFilter.value;
         
-        console.log('입출고 내역 필터링:', { year, month, day });
-        console.log('전체 거래 데이터:', this.transactions);
+        console.log('입출고 내역 필터링 시작:', { year, month, day });
+        console.log('전체 거래 데이터 수:', this.transactions?.length || 0);
         
         if (!year && !month && !day) {
             // 필터가 없으면 전체 표시
+            console.log('필터가 없어서 전체 거래 내역 표시');
             this.updateTransactionHistory();
+            return;
+        }
+        
+        if (!this.transactions || this.transactions.length === 0) {
+            console.log('거래 데이터가 없음');
+            this.updateTransactionHistory([]);
             return;
         }
         
         const filteredTransactions = this.transactions.filter(transaction => {
             // 한국 시간 형식 (2025. 8. 29. 오후 3:30:45) 파싱
             const timestampStr = transaction.timestamp;
-            console.log('거래 타임스탬프:', timestampStr);
+            console.log('거래 타임스탬프 분석:', timestampStr);
             
             // 날짜 부분만 추출 (2025. 8. 29.)
             const dateMatch = timestampStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
@@ -1781,16 +1805,32 @@ class LogisticsManager {
             const transactionMonth = parseInt(dateMatch[2]);
             const transactionDay = parseInt(dateMatch[3]);
             
-            console.log('파싱된 날짜:', { transactionYear, transactionMonth, transactionDay });
+            console.log('파싱된 날짜:', { 
+                transactionYear, 
+                transactionMonth, 
+                transactionDay,
+                filterYear: year ? parseInt(year) : null,
+                filterMonth: month ? parseInt(month) : null,
+                filterDay: day ? parseInt(day) : null
+            });
             
-            if (year && transactionYear !== parseInt(year)) return false;
-            if (month && transactionMonth !== parseInt(month)) return false;
-            if (day && transactionDay !== parseInt(day)) return false;
+            // 필터 조건 확인
+            const yearMatch = !year || transactionYear === parseInt(year);
+            const monthMatch = !month || transactionMonth === parseInt(month);
+            const dayMatch = !day || transactionDay === parseInt(day);
             
-            return true;
+            const isMatch = yearMatch && monthMatch && dayMatch;
+            console.log('필터 매칭 결과:', { yearMatch, monthMatch, dayMatch, isMatch });
+            
+            return isMatch;
         });
         
-        console.log('필터링된 거래:', filteredTransactions);
+        console.log('필터링 완료:', { 
+            원본데이터수: this.transactions.length, 
+            필터링된데이터수: filteredTransactions.length,
+            필터링된거래: filteredTransactions 
+        });
+        
         this.updateTransactionHistory(filteredTransactions);
     }
 
