@@ -421,6 +421,172 @@ tbody tr:hover {
     margin-bottom: 25px;
 }
 
+/* 바코드 스캐너 스타일 */
+.barcode-scanner {
+    margin-bottom: 20px;
+}
+
+.barcode-scanner input {
+    font-size: 1.2rem;
+    padding: 15px;
+    border: 3px solid #3498db;
+    border-radius: 8px;
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+}
+
+.barcode-scanner input:focus {
+    border-color: #2980b9;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+}
+
+/* 거래 유형 선택 */
+.transaction-type-selector {
+    text-align: center;
+}
+
+.type-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.type-btn {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.type-btn.active {
+    border-color: currentColor;
+    transform: scale(1.05);
+}
+
+/* 상품 목록 컨테이너 */
+.product-list-container {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+}
+
+.product-list-container h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 1.3rem;
+}
+
+.scanned-products {
+    min-height: 200px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.empty-state {
+    text-align: center;
+    color: #7f8c8d;
+    padding: 40px 20px;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.product-info {
+    flex: 1;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.product-details {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.qty-btn {
+    width: 35px;
+    height: 35px;
+    border: none;
+    border-radius: 50%;
+    background: #3498db;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qty-btn:hover {
+    background: #2980b9;
+}
+
+.qty-display {
+    font-weight: bold;
+    font-size: 1.2rem;
+    min-width: 40px;
+    text-align: center;
+}
+
+.remove-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.remove-btn:hover {
+    background: #c0392b;
+}
+
+/* 처리 버튼들 */
+.process-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-large {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    min-width: 180px;
+}
+
 .form-group {
     margin-bottom: 20px;
 }

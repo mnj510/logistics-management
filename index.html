@@ -159,30 +159,44 @@
             </div>
 
             <div class="inout-form">
-                <div class="form-group">
-                    <label for="barcodeInput">바코드 입력/스캔:</label>
-                    <input type="text" id="barcodeInput" placeholder="바코드를 입력하거나 스캔하세요">
+                <div class="barcode-scanner">
+                    <label for="barcodeInput">바코드 스캔:</label>
+                    <input type="text" id="barcodeInput" placeholder="바코드를 스캔하세요" autocomplete="off">
                 </div>
-                <div class="form-group">
-                    <label for="productSelect">상품 선택:</label>
-                    <select id="productSelect">
-                        <option value="">상품을 선택하세요</option>
-                    </select>
+                
+                <div class="transaction-type-selector">
+                    <label>거래 유형:</label>
+                    <div class="type-buttons">
+                        <button class="btn btn-success type-btn active" id="inTypeBtn" data-type="in">
+                            <i class="fas fa-arrow-down"></i> 입고
+                        </button>
+                        <button class="btn btn-warning type-btn" id="outTypeBtn" data-type="out">
+                            <i class="fas fa-arrow-up"></i> 출고
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="quantityInput">수량:</label>
-                    <input type="number" id="quantityInput" min="1" value="1">
+            </div>
+
+            <div class="product-list-container">
+                <h3>스캔된 상품 목록</h3>
+                <div class="scanned-products" id="scannedProducts">
+                    <div class="empty-state">
+                        <i class="fas fa-barcode"></i>
+                        <p>바코드를 스캔하여 상품을 추가하세요</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="transactionType">거래 유형:</label>
-                    <select id="transactionType">
-                        <option value="in">입고</option>
-                        <option value="out">출고</option>
-                    </select>
+                
+                <div class="process-buttons">
+                    <button class="btn btn-success btn-large" id="processInBtn" style="display: none;">
+                        <i class="fas fa-arrow-down"></i> 일괄 입고 처리
+                    </button>
+                    <button class="btn btn-warning btn-large" id="processOutBtn" style="display: none;">
+                        <i class="fas fa-arrow-up"></i> 일괄 출고 처리
+                    </button>
+                    <button class="btn btn-secondary" id="clearListBtn" style="display: none;">
+                        <i class="fas fa-trash"></i> 목록 초기화
+                    </button>
                 </div>
-                <button class="btn btn-primary" id="processTransactionBtn">
-                    <i class="fas fa-check"></i> 처리
-                </button>
             </div>
 
             <div class="transaction-history">

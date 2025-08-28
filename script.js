@@ -13,6 +13,8 @@ class LogisticsManager {
         this.transactions = [];
         this.packingRecords = [];
         this.tasks = [];
+        this.scannedProducts = []; // 스캔된 상품 목록
+        this.currentTransactionType = 'in'; // 현재 거래 유형
         
         this.initSupabase();
         this.init();
@@ -356,9 +358,18 @@ class LogisticsManager {
         document.getElementById('saveProductBtn').addEventListener('click', () => this.saveProduct());
         document.getElementById('cancelProductBtn').addEventListener('click', () => this.hideProductModal());
 
-        // 입출고
-        document.getElementById('barcodeInput').addEventListener('input', (e) => this.handleBarcodeInput(e.target.value));
-        document.getElementById('processTransactionBtn').addEventListener('click', () => this.processTransaction());
+        // 입출고 - 새로운 시스템
+        document.getElementById('barcodeInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.handleBarcodeScanned(e.target.value);
+                e.target.value = '';
+            }
+        });
+        document.getElementById('inTypeBtn').addEventListener('click', () => this.setTransactionType('in'));
+        document.getElementById('outTypeBtn').addEventListener('click', () => this.setTransactionType('out'));
+        document.getElementById('processInBtn').addEventListener('click', () => this.processBatchTransaction('in'));
+        document.getElementById('processOutBtn').addEventListener('click', () => this.processBatchTransaction('out'));
+        document.getElementById('clearListBtn').addEventListener('click', () => this.clearScannedProducts());
 
         // 포장
         document.getElementById('packingBarcode').addEventListener('input', (e) => this.handlePackingBarcodeInput(e.target.value));
@@ -885,7 +896,7 @@ class LogisticsManager {
 
     // 상품 선택기 업데이트
     updateProductSelectors() {
-        const selectors = ['productSelect', 'packingProduct'];
+        const selectors = ['packingProduct']; // productSelect 제거 (새 시스템에서는 불필요)
         
         // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
         if (!this.inventory) {
@@ -905,6 +916,198 @@ class LogisticsManager {
                 selector.appendChild(option);
             });
         });
+    }
+
+    // 거래 유형 설정
+    setTransactionType(type) {
+        this.currentTransactionType = type;
+        
+        // 버튼 상태 업데이트
+        document.getElementById('inTypeBtn').classList.toggle('active', type === 'in');
+        document.getElementById('outTypeBtn').classList.toggle('active', type === 'out');
+        
+        // 처리 버튼 표시 업데이트
+        this.updateProcessButtons();
+    }
+
+    // 바코드 스캔 처리
+    handleBarcodeScanned(barcode) {
+        if (!barcode.trim()) return;
+        
+        console.log('바코드 스캔:', barcode);
+        
+        // 상품 찾기
+        const product = this.inventory.find(p => p.barcode === barcode.trim());
+        if (!product) {
+            alert('해당 바코드의 상품을 찾을 수 없습니다.');
+            return;
+        }
+        
+        // 이미 스캔된 상품인지 확인
+        const existingItem = this.scannedProducts.find(item => item.productId === product.id);
+        if (existingItem) {
+            // 수량 증가
+            existingItem.quantity += 1;
+        } else {
+            // 새 상품 추가
+            this.scannedProducts.push({
+                productId: product.id,
+                productName: product.name,
+                barcode: product.barcode,
+                quantity: 1,
+                unit: product.unit
+            });
+        }
+        
+        this.updateScannedProductsDisplay();
+        this.updateProcessButtons();
+        
+        // 스캔 완료 피드백
+        const barcodeInput = document.getElementById('barcodeInput');
+        barcodeInput.style.borderColor = '#27ae60';
+        setTimeout(() => {
+            barcodeInput.style.borderColor = '#3498db';
+        }, 500);
+    }
+
+    // 스캔된 상품 목록 표시 업데이트
+    updateScannedProductsDisplay() {
+        const container = document.getElementById('scannedProducts');
+        
+        if (this.scannedProducts.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-barcode"></i>
+                    <p>바코드를 스캔하여 상품을 추가하세요</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = '';
+        this.scannedProducts.forEach((item, index) => {
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product-item';
+            productDiv.innerHTML = `
+                <div class="product-info">
+                    <div class="product-name">${item.productName}</div>
+                    <div class="product-details">바코드: ${item.barcode} | 단위: ${item.unit}</div>
+                </div>
+                <div class="quantity-controls">
+                    <button class="qty-btn" onclick="logisticsManager.changeProductQuantity(${index}, -1)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span class="qty-display">${item.quantity}</span>
+                    <button class="qty-btn" onclick="logisticsManager.changeProductQuantity(${index}, 1)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="remove-btn" onclick="logisticsManager.removeScannedProduct(${index})">
+                        <i class="fas fa-trash"></i> 제거
+                    </button>
+                </div>
+            `;
+            container.appendChild(productDiv);
+        });
+    }
+
+    // 상품 수량 변경
+    changeProductQuantity(index, change) {
+        if (index < 0 || index >= this.scannedProducts.length) return;
+        
+        this.scannedProducts[index].quantity += change;
+        
+        if (this.scannedProducts[index].quantity <= 0) {
+            this.scannedProducts.splice(index, 1);
+        }
+        
+        this.updateScannedProductsDisplay();
+        this.updateProcessButtons();
+    }
+
+    // 스캔된 상품 제거
+    removeScannedProduct(index) {
+        if (index < 0 || index >= this.scannedProducts.length) return;
+        
+        this.scannedProducts.splice(index, 1);
+        this.updateScannedProductsDisplay();
+        this.updateProcessButtons();
+    }
+
+    // 처리 버튼 상태 업데이트
+    updateProcessButtons() {
+        const hasProducts = this.scannedProducts.length > 0;
+        
+        document.getElementById('processInBtn').style.display = 
+            (hasProducts && this.currentTransactionType === 'in') ? 'block' : 'none';
+        document.getElementById('processOutBtn').style.display = 
+            (hasProducts && this.currentTransactionType === 'out') ? 'block' : 'none';
+        document.getElementById('clearListBtn').style.display = hasProducts ? 'block' : 'none';
+    }
+
+    // 일괄 거래 처리
+    async processBatchTransaction(type) {
+        if (this.scannedProducts.length === 0) {
+            alert('처리할 상품이 없습니다.');
+            return;
+        }
+        
+        const typeName = type === 'in' ? '입고' : '출고';
+        
+        if (!confirm(`${this.scannedProducts.length}개 상품을 ${typeName} 처리하시겠습니까?`)) {
+            return;
+        }
+        
+        try {
+            for (const item of this.scannedProducts) {
+                const product = this.inventory.find(p => p.id === item.productId);
+                if (!product) continue;
+                
+                // 출고시 재고 확인
+                if (type === 'out' && product.quantity < item.quantity) {
+                    alert(`${product.name}의 재고가 부족합니다. (현재: ${product.quantity}, 요청: ${item.quantity})`);
+                    return;
+                }
+                
+                // 재고 업데이트
+                if (type === 'in') {
+                    product.quantity += item.quantity;
+                } else {
+                    product.quantity -= item.quantity;
+                }
+                
+                // 거래 기록 추가
+                const transaction = {
+                    id: Date.now() + Math.random(), // 고유 ID 생성
+                    productId: product.id,
+                    productName: product.name,
+                    type: type === 'in' ? '입고' : '출고',
+                    quantity: item.quantity,
+                    timestamp: new Date().toLocaleString('ko-KR')
+                };
+                
+                this.transactions.push(transaction);
+            }
+            
+            await this.saveData();
+            this.updateInventoryDisplay();
+            this.updateTransactionHistory();
+            
+            const totalItems = this.scannedProducts.reduce((sum, item) => sum + item.quantity, 0);
+            alert(`${typeName} 처리 완료! 총 ${totalItems}개 상품이 처리되었습니다.`);
+            
+            this.clearScannedProducts();
+            
+        } catch (error) {
+            console.error('거래 처리 오류:', error);
+            alert('거래 처리 중 오류가 발생했습니다.');
+        }
+    }
+
+    // 스캔된 상품 목록 초기화
+    clearScannedProducts() {
+        this.scannedProducts = [];
+        this.updateScannedProductsDisplay();
+        this.updateProcessButtons();
     }
 
     // 바코드 입력 처리
