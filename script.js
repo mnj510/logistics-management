@@ -1231,7 +1231,6 @@ class LogisticsManager {
         
         return new Date(year, month, day);
     }
-    }
 
     // 상품 선택기 업데이트 (현재 선택값 보존)
     updateProductSelectors(preserveSelection = true) {
