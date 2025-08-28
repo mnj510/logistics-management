@@ -372,7 +372,10 @@ class LogisticsManager {
         document.getElementById('checkInBtn').addEventListener('click', () => this.checkIn());
         document.getElementById('checkOutBtn').addEventListener('click', () => this.checkOut());
         document.getElementById('filterBtn').addEventListener('click', () => this.filterAttendance());
-        document.getElementById('refreshBtn').addEventListener('click', () => this.refreshData());
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            console.log('수동 데이터 새로고침 시작');
+            this.refreshData();
+        });
         
         // 내역 필터 버튼
         document.getElementById('filterTransactionBtn').addEventListener('click', () => this.filterTransactionHistory());
@@ -386,8 +389,8 @@ class LogisticsManager {
             this.updateProductHistoryDisplay();
         });
         
-        // 데이터 새로고침 기능 (5초마다 자동 새로고침)
-        setInterval(() => this.refreshData(), 5000);
+        // 자동 새로고침 기능 제거 (삭제된 데이터가 다시 로드되는 문제 해결)
+        // setInterval(() => this.refreshData(), 5000);
 
         // 재고 관리
         document.getElementById('addProductBtn').addEventListener('click', () => this.showProductModal());
@@ -1071,7 +1074,10 @@ class LogisticsManager {
             // UI 업데이트
             this.updateAttendanceDisplay();
             
+            // 삭제 완료 알림
             alert('출퇴근 기록이 삭제되었습니다.');
+            
+            console.log('출퇴근 기록 삭제 완료 - UI 업데이트됨');
             
         } catch (error) {
             console.error('출퇴근 기록 삭제 오류:', error);
