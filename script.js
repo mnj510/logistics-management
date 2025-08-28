@@ -1247,28 +1247,47 @@ class LogisticsManager {
     // 상품별 입출고 내역 업데이트
     updateProductHistoryDisplay() {
         const tbody = document.querySelector('#productHistoryTable tbody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('상품별 내역 테이블 tbody를 찾을 수 없음');
+            return;
+        }
 
         console.log('상품별 내역 업데이트 시작:', { 
             currentProductHistory: this.currentProductHistory,
-            totalTransactions: this.transactions.length 
+            totalTransactions: this.transactions?.length || 0 
         });
+
+        // 데이터 검증
+        if (!this.transactions || this.transactions.length === 0) {
+            console.log('거래 데이터가 없음');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">거래 데이터가 없습니다.</td></tr>';
+            return;
+        }
 
         // 해당 상품의 거래 내역만 필터링
         let productTransactions = this.transactions.filter(transaction => 
             transaction.productId === this.currentProductHistory
         );
 
-        console.log('상품별 거래 내역:', productTransactions);
+        console.log('상품별 거래 내역 필터링 결과:', {
+            전체거래수: this.transactions.length,
+            상품별거래수: productTransactions.length,
+            상품ID: this.currentProductHistory,
+            상품별거래: productTransactions
+        });
 
         // 날짜 필터 적용
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
 
-        console.log('날짜 필터:', { startDate, endDate });
+        console.log('날짜 필터 설정:', { startDate, endDate });
 
         if (startDate && endDate) {
+            console.log('날짜 필터 적용 시작');
+            
             productTransactions = productTransactions.filter(transaction => {
+                console.log('거래 분석:', transaction);
+                
                 const transactionDate = this.parseKoreanDate(transaction.timestamp);
                 if (!transactionDate) {
                     console.log('날짜 파싱 실패:', transaction.timestamp);
@@ -1277,17 +1296,28 @@ class LogisticsManager {
                 
                 const transactionDateStr = transactionDate.toISOString().split('T')[0];
                 const isInRange = transactionDateStr >= startDate && transactionDateStr <= endDate;
-                console.log('날짜 비교:', { 
-                    transactionDateStr, 
-                    startDate, 
-                    endDate, 
-                    isInRange 
+                
+                console.log('날짜 비교 상세:', { 
+                    원본타임스탬프: transaction.timestamp,
+                    파싱된날짜: transactionDate,
+                    날짜문자열: transactionDateStr,
+                    시작날짜: startDate,
+                    종료날짜: endDate,
+                    범위내여부: isInRange
                 });
+                
                 return isInRange;
             });
+            
+            console.log('날짜 필터 적용 완료:', {
+                필터전거래수: this.transactions.filter(t => t.productId === this.currentProductHistory).length,
+                필터후거래수: productTransactions.length
+            });
+        } else {
+            console.log('날짜 필터가 설정되지 않아 전체 기간 표시');
         }
 
-        console.log('필터링된 거래 내역:', productTransactions);
+        console.log('최종 필터링된 거래 내역:', productTransactions);
 
         // 최신순으로 정렬
         productTransactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -1302,7 +1332,8 @@ class LogisticsManager {
 
         console.log('표시할 거래 내역 수:', productTransactions.length);
 
-        productTransactions.forEach(transaction => {
+        productTransactions.forEach((transaction, index) => {
+            console.log(`거래 내역 ${index + 1} 표시:`, transaction);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${transaction.timestamp}</td>
@@ -1312,18 +1343,35 @@ class LogisticsManager {
             `;
             tbody.appendChild(row);
         });
+        
+        console.log('상품별 내역 표시 완료');
     }
 
     // 한국 날짜 형식 파싱
     parseKoreanDate(dateStr) {
+        console.log('parseKoreanDate 호출:', dateStr);
+        
         const match = dateStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
-        if (!match) return null;
+        if (!match) {
+            console.log('날짜 패턴 매칭 실패:', dateStr);
+            return null;
+        }
         
         const year = parseInt(match[1]);
         const month = parseInt(match[2]) - 1; // JavaScript 월은 0부터 시작
         const day = parseInt(match[3]);
         
-        return new Date(year, month, day);
+        const parsedDate = new Date(year, month, day);
+        console.log('날짜 파싱 결과:', { 
+            원본문자열: dateStr,
+            매칭결과: match,
+            년: year,
+            월: month + 1,
+            일: day,
+            파싱된날짜: parsedDate
+        });
+        
+        return parsedDate;
     }
 
     // 상품 선택기 업데이트 (현재 선택값 보존)
