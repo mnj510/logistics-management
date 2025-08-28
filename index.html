@@ -57,8 +57,19 @@
             
             <div class="attendance-controls">
                 <div class="time-selector">
-                    <label for="attendanceTime">시간 선택:</label>
-                    <select id="attendanceTime"></select>
+                    <label>시간 선택:</label>
+                    <div class="time-inputs">
+                        <select id="attendanceHour">
+                            <option value="">시</option>
+                        </select>
+                        <span>:</span>
+                        <select id="attendanceMinute">
+                            <option value="">분</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="current-date">
+                    <span id="currentDate"></span>
                 </div>
                 <div class="action-buttons">
                     <button class="btn btn-primary" id="checkInBtn">
@@ -131,6 +142,7 @@
                             <th>바코드</th>
                             <th>상품명</th>
                             <th>재고수량</th>
+                            <th>그로스 포장</th>
                             <th>단위</th>
                             <th>액션</th>
                         </tr>
@@ -283,12 +295,16 @@
                 <input type="text" id="productName" placeholder="상품명을 입력하세요">
             </div>
             <div class="form-group">
-                <label for="productQuantity">초기 재고:</label>
+                <label for="productQuantity">재고 수량:</label>
                 <input type="number" id="productQuantity" min="0" value="0">
             </div>
             <div class="form-group">
                 <label for="productUnit">단위:</label>
                 <input type="text" id="productUnit" placeholder="개, 박스, kg 등" value="개">
+            </div>
+            <div class="form-group">
+                <label for="productGrossQty">그로스 포장 수량:</label>
+                <input type="number" id="productGrossQty" min="0" value="0" placeholder="그로스 포장 개수">
             </div>
             <div class="modal-actions">
                 <button class="btn btn-primary" id="saveProductBtn">저장</button>

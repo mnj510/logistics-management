@@ -254,11 +254,32 @@ body {
     margin-right: 10px;
 }
 
-.time-selector select {
+.time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.time-inputs select {
     padding: 8px 12px;
     border: 2px solid #ddd;
     border-radius: 6px;
     font-size: 0.9rem;
+    min-width: 70px;
+}
+
+.time-inputs span {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.current-date {
+    background: #e8f4fd;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 2px solid #3498db;
+    font-weight: 600;
+    color: #2c3e50;
 }
 
 .action-buttons {

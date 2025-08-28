@@ -244,6 +244,7 @@ class LogisticsManager {
                     barcode: record.barcode,
                     name: record.name,
                     quantity: record.quantity || 0,
+                    gross_qty: record.gross_qty || 0,
                     unit: record.unit || '개'
                 }));
             } else if (tableName === 'transactions') {
@@ -409,27 +410,42 @@ class LogisticsManager {
         this.updateTaskDisplay();
     }
 
-    // 시간 선택기 초기화 (10분 단위)
+    // 시간 선택기 초기화 (시간/분 분리)
     initializeTimeSelector() {
-        const timeSelector = document.getElementById('attendanceTime');
-        timeSelector.innerHTML = '';
+        const hourSelector = document.getElementById('attendanceHour');
+        const minuteSelector = document.getElementById('attendanceMinute');
+        const currentDateSpan = document.getElementById('currentDate');
         
+        // 시간 옵션 생성
+        hourSelector.innerHTML = '<option value="">시</option>';
         for (let hour = 0; hour < 24; hour++) {
-            for (let minute = 0; minute < 60; minute += 10) {
-                const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                const option = document.createElement('option');
-                option.value = timeStr;
-                option.textContent = timeStr;
-                timeSelector.appendChild(option);
-            }
+            const option = document.createElement('option');
+            option.value = hour.toString().padStart(2, '0');
+            option.textContent = `${hour.toString().padStart(2, '0')}시`;
+            hourSelector.appendChild(option);
         }
         
-        // 현재 시간으로 설정 (10분 단위로 반올림)
+        // 분 옵션 생성 (10분 단위)
+        minuteSelector.innerHTML = '<option value="">분</option>';
+        for (let minute = 0; minute < 60; minute += 10) {
+            const option = document.createElement('option');
+            option.value = minute.toString().padStart(2, '0');
+            option.textContent = `${minute.toString().padStart(2, '0')}분`;
+            minuteSelector.appendChild(option);
+        }
+        
+        // 현재 시간으로 설정
         const now = new Date();
         const currentHour = now.getHours();
-        const currentMinute = Math.round(now.getMinutes() / 10) * 10;
-        const currentTime = `${currentHour.toString().padStart(2, '0')}:${(currentMinute % 60).toString().padStart(2, '0')}`;
-        timeSelector.value = currentTime;
+        const currentMinute = Math.floor(now.getMinutes() / 10) * 10;
+        
+        hourSelector.value = currentHour.toString().padStart(2, '0');
+        minuteSelector.value = currentMinute.toString().padStart(2, '0');
+        
+        // 현재 날짜 표시
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}년 ${(today.getMonth() + 1).toString().padStart(2, '0')}월 ${today.getDate().toString().padStart(2, '0')}일`;
+        currentDateSpan.textContent = dateStr;
     }
 
     // 날짜 필터 초기화
@@ -492,7 +508,15 @@ class LogisticsManager {
 
     // 출근 처리
     async checkIn() {
-        const selectedTime = document.getElementById('attendanceTime').value;
+        const hourSelector = document.getElementById('attendanceHour');
+        const minuteSelector = document.getElementById('attendanceMinute');
+        
+        if (!hourSelector.value || !minuteSelector.value) {
+            alert('시간과 분을 모두 선택해주세요.');
+            return;
+        }
+        
+        const selectedTime = `${hourSelector.value}:${minuteSelector.value}`;
         const today = new Date().toISOString().split('T')[0];
         
         console.log('출근 처리 시작:', { selectedTime, today });
@@ -533,7 +557,15 @@ class LogisticsManager {
 
     // 퇴근 처리
     async checkOut() {
-        const selectedTime = document.getElementById('attendanceTime').value;
+        const hourSelector = document.getElementById('attendanceHour');
+        const minuteSelector = document.getElementById('attendanceMinute');
+        
+        if (!hourSelector.value || !minuteSelector.value) {
+            alert('시간과 분을 모두 선택해주세요.');
+            return;
+        }
+        
+        const selectedTime = `${hourSelector.value}:${minuteSelector.value}`;
         const today = new Date().toISOString().split('T')[0];
         
         console.log('퇴근 처리 시작:', { selectedTime, today });
@@ -725,12 +757,14 @@ class LogisticsManager {
             document.getElementById('productBarcode').value = product.barcode;
             document.getElementById('productName').value = product.name;
             document.getElementById('productQuantity').value = product.quantity;
+            document.getElementById('productGrossQty').value = product.gross_qty || 0;
             document.getElementById('productUnit').value = product.unit;
         } else {
             title.textContent = '상품 추가';
             document.getElementById('productBarcode').value = '';
             document.getElementById('productName').value = '';
             document.getElementById('productQuantity').value = '0';
+            document.getElementById('productGrossQty').value = '0';
             document.getElementById('productUnit').value = '개';
         }
         
@@ -747,6 +781,7 @@ class LogisticsManager {
         const barcode = document.getElementById('productBarcode').value.trim();
         const name = document.getElementById('productName').value.trim();
         const quantity = parseInt(document.getElementById('productQuantity').value) || 0;
+        const grossQty = parseInt(document.getElementById('productGrossQty').value) || 0;
         const unit = document.getElementById('productUnit').value.trim();
         
         if (!barcode || !name) {
@@ -770,6 +805,7 @@ class LogisticsManager {
             product.barcode = barcode;
             product.name = name;
             product.quantity = quantity;
+            product.gross_qty = grossQty;
             product.unit = unit;
         } else {
             // 새 상품 추가
@@ -778,6 +814,7 @@ class LogisticsManager {
                 barcode,
                 name,
                 quantity,
+                gross_qty: grossQty,
                 unit
             };
             this.inventory.push(newProduct);
@@ -821,6 +858,7 @@ class LogisticsManager {
                 <td>${product.barcode}</td>
                 <td>${product.name}</td>
                 <td>${product.quantity}</td>
+                <td>${product.gross_qty || 0}</td>
                 <td>${product.unit}</td>
                 <td>
                     <button class="btn btn-info" onclick="logisticsManager.showProductModal(${JSON.stringify(product).replace(/"/g, '&quot;')})">
@@ -969,7 +1007,7 @@ class LogisticsManager {
     }
 
     // 포장 처리
-    processPacking() {
+    async processPacking() {
         const productId = document.getElementById('packingProduct').value;
         const quantity = parseInt(document.getElementById('packingQuantity').value) || 0;
         
@@ -984,6 +1022,9 @@ class LogisticsManager {
             return;
         }
         
+        // 그로스 포장 수량 증가
+        product.gross_qty = (product.gross_qty || 0) + quantity;
+        
         // 포장 기록 추가
         const packingRecord = {
             id: Date.now(),
@@ -995,19 +1036,26 @@ class LogisticsManager {
         };
         
         this.packingRecords.push(packingRecord);
-        this.saveData();
-        this.updatePackingHistory();
         
-        // 폼 초기화
-        document.getElementById('packingBarcode').value = '';
-        document.getElementById('packingProduct').value = '';
-        document.getElementById('packingQuantity').value = '1';
-        
-        alert('포장 처리가 완료되었습니다.');
+        try {
+            await this.saveData();
+            this.updatePackingHistory();
+            this.updateInventoryDisplay();
+            
+            // 폼 초기화
+            document.getElementById('packingBarcode').value = '';
+            document.getElementById('packingProduct').value = '';
+            document.getElementById('packingQuantity').value = '1';
+            
+            alert(`포장 처리 완료! 그로스 포장 수량이 ${quantity}개 증가했습니다.`);
+        } catch (error) {
+            console.error('포장 처리 오류:', error);
+            alert('포장 처리 중 오류가 발생했습니다.');
+        }
     }
 
     // 출고 처리
-    processShipping() {
+    async processShipping() {
         const packingRecords = this.packingRecords.filter(record => record.status === '포장완료');
         
         if (packingRecords.length === 0) {
@@ -1015,23 +1063,28 @@ class LogisticsManager {
             return;
         }
         
-        // 포장완료 상품들을 출고완료로 변경하고 재고에서 차감
+        // 포장완료 상품들을 출고완료로 변경하고 그로스 포장 수량에서 차감
         packingRecords.forEach(record => {
             record.status = '출고완료';
             record.shippedAt = new Date().toLocaleString('ko-KR');
             
-            // 재고 차감
+            // 그로스 포장 수량에서 차감
             const product = this.inventory.find(p => p.id === record.productId);
-            if (product && product.quantity >= record.quantity) {
-                product.quantity -= record.quantity;
+            if (product && product.gross_qty >= record.quantity) {
+                product.gross_qty -= record.quantity;
             }
         });
         
-        this.saveData();
-        this.updateInventoryDisplay();
-        this.updatePackingHistory();
-        
-        alert(`${packingRecords.length}개 상품이 출고 처리되었습니다.`);
+        try {
+            await this.saveData();
+            this.updateInventoryDisplay();
+            this.updatePackingHistory();
+            
+            alert(`${packingRecords.length}개 상품이 출고 처리되었습니다.`);
+        } catch (error) {
+            console.error('출고 처리 오류:', error);
+            alert('출고 처리 중 오류가 발생했습니다.');
+        }
     }
 
     // 포장 내역 업데이트
@@ -1072,24 +1125,29 @@ class LogisticsManager {
     }
 
     // 단일 상품 출고
-    shipSingleItem(recordId) {
+    async shipSingleItem(recordId) {
         const record = this.packingRecords.find(r => r.id === recordId);
         if (!record) return;
         
         record.status = '출고완료';
         record.shippedAt = new Date().toLocaleString('ko-KR');
         
-        // 재고 차감
+        // 그로스 포장 수량에서 차감
         const product = this.inventory.find(p => p.id === record.productId);
-        if (product && product.quantity >= record.quantity) {
-            product.quantity -= record.quantity;
+        if (product && product.gross_qty >= record.quantity) {
+            product.gross_qty -= record.quantity;
         }
         
-        this.saveData();
-        this.updateInventoryDisplay();
-        this.updatePackingHistory();
-        
-        alert('출고 처리가 완료되었습니다.');
+        try {
+            await this.saveData();
+            this.updateInventoryDisplay();
+            this.updatePackingHistory();
+            
+            alert('출고 처리가 완료되었습니다.');
+        } catch (error) {
+            console.error('출고 처리 오류:', error);
+            alert('출고 처리 중 오류가 발생했습니다.');
+        }
     }
 
     // 업무 모달 표시
