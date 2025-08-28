@@ -31,6 +31,7 @@ class LogisticsManager {
     async initializeApp() {
         try {
             await this.loadData();
+            this.updateAdminModeUI(); // 관리자 모드 UI 초기화
             this.updateAttendanceDisplay();
             this.updateInventoryDisplay();
             this.updateTransactionHistory();
@@ -41,6 +42,7 @@ class LogisticsManager {
             console.error('앱 초기화 오류:', error);
             // 오류 발생 시 로컬 스토리지에서 로드
             this.loadFromLocalStorage();
+            this.updateAdminModeUI(); // 관리자 모드 UI 초기화
             this.updateAttendanceDisplay();
             this.updateInventoryDisplay();
             this.updateTransactionHistory();
@@ -489,10 +491,41 @@ class LogisticsManager {
             console.log('관리자 모드 비활성화됨');
         }
         
+        // 관리자 모드에 따른 UI 업데이트
+        this.updateAdminModeUI();
         this.updateAttendanceDisplay();
         this.updateTaskDisplay();
         
         console.log('관리자 모드 토글 완료, 현재 상태:', this.isAdminMode);
+    }
+
+    // 관리자 모드에 따른 UI 업데이트
+    updateAdminModeUI() {
+        console.log('관리자 모드 UI 업데이트:', { isAdminMode: this.isAdminMode });
+        
+        // 업무 추가 버튼 표시/숨김
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        if (addTaskBtn) {
+            if (this.isAdminMode) {
+                addTaskBtn.style.display = 'inline-block';
+                console.log('업무 추가 버튼 표시됨');
+            } else {
+                addTaskBtn.style.display = 'none';
+                console.log('업무 추가 버튼 숨김됨');
+            }
+        }
+        
+        // 관리자 전용 요소들 표시/숨김
+        const adminOnlyElements = document.querySelectorAll('.admin-only');
+        adminOnlyElements.forEach(element => {
+            if (this.isAdminMode) {
+                element.style.display = element.classList.contains('task-controls') ? 'block' : 'flex';
+            } else {
+                element.style.display = 'none';
+            }
+        });
+        
+        console.log('관리자 모드 UI 업데이트 완료');
     }
 
     // 내역 필터 초기화
