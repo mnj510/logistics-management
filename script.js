@@ -2118,7 +2118,15 @@ class LogisticsManager {
     // 업무 목록 표시 업데이트
     updateTaskDisplay() {
         const taskList = document.getElementById('taskList');
-        if (!taskList) return;
+        if (!taskList) {
+            console.error('업무 목록 요소를 찾을 수 없음');
+            return;
+        }
+        
+        console.log('업무 목록 표시 업데이트 시작:', { 
+            isAdminMode: this.isAdminMode,
+            tasksCount: this.tasks?.length || 0 
+        });
         
         // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
         if (!this.tasks) {
@@ -2126,7 +2134,19 @@ class LogisticsManager {
         }
         
         taskList.innerHTML = '';
-        this.tasks.forEach(task => {
+        this.tasks.forEach((task, index) => {
+            console.log(`업무 ${index + 1} 표시:`, task);
+            
+            const deleteButtonHtml = this.isAdminMode ? 
+                `<button class="btn btn-danger" onclick="logisticsManager.deleteTask(${task.id})">
+                    <i class="fas fa-trash"></i>
+                </button>` : '';
+            
+            const editButtonHtml = this.isAdminMode ? 
+                `<button class="btn btn-info" onclick="logisticsManager.showTaskModal(${JSON.stringify(task).replace(/"/g, '&quot;')})">
+                    <i class="fas fa-edit"></i>
+                </button>` : '';
+            
             const taskItem = document.createElement('div');
             taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
             taskItem.innerHTML = `
@@ -2139,16 +2159,14 @@ class LogisticsManager {
                     </div>
                 </div>
                 <div class="task-actions admin-only" style="display: ${this.isAdminMode ? 'flex' : 'none'}">
-                    <button class="btn btn-info" onclick="logisticsManager.showTaskModal(${JSON.stringify(task).replace(/"/g, '&quot;')})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger" onclick="logisticsManager.deleteTask(${task.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${editButtonHtml}
+                    ${deleteButtonHtml}
                 </div>
             `;
             taskList.appendChild(taskItem);
         });
+        
+        console.log('업무 목록 표시 완료, 관리자 모드:', this.isAdminMode);
         
         // 진행률 업데이트
         this.updateTaskProgress();
@@ -2241,13 +2259,50 @@ class LogisticsManager {
     }
 
     // 업무 삭제
-    deleteTask(id) {
-        if (!this.isAdminMode) return;
+    async deleteTask(id) {
+        console.log('업무 삭제 시도:', { id, isAdminMode: this.isAdminMode });
         
-        if (confirm('정말로 이 업무를 삭제하시겠습니까?')) {
+        if (!this.isAdminMode) {
+            console.log('관리자 모드가 아닙니다. 삭제 불가.');
+            alert('관리자 모드에서만 삭제할 수 있습니다.');
+            return;
+        }
+        
+        if (!confirm('정말로 이 업무를 삭제하시겠습니까?')) {
+            console.log('사용자가 삭제를 취소했습니다.');
+            return;
+        }
+        
+        try {
+            console.log('삭제 전 업무 수:', this.tasks.length);
+            
+            // 해당 ID의 업무 찾기
+            const taskToDelete = this.tasks.find(task => task.id === id);
+            if (!taskToDelete) {
+                console.error('삭제할 업무를 찾을 수 없습니다:', id);
+                alert('삭제할 업무를 찾을 수 없습니다.');
+                return;
+            }
+            
+            console.log('삭제할 업무:', taskToDelete);
+            
+            // 업무 삭제
             this.tasks = this.tasks.filter(task => task.id !== id);
-            this.saveData();
+            
+            console.log('삭제 후 업무 수:', this.tasks.length);
+            
+            // 데이터 저장
+            await this.saveData();
+            console.log('업무 삭제 및 데이터 저장 완료');
+            
+            // UI 업데이트
             this.updateTaskDisplay();
+            
+            alert('업무가 삭제되었습니다.');
+            
+        } catch (error) {
+            console.error('업무 삭제 오류:', error);
+            alert('업무 삭제 중 오류가 발생했습니다.');
         }
     }
 
