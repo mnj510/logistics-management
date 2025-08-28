@@ -1180,24 +1180,45 @@ class LogisticsManager {
         const tbody = document.querySelector('#productHistoryTable tbody');
         if (!tbody) return;
 
+        console.log('상품별 내역 업데이트 시작:', { 
+            currentProductHistory: this.currentProductHistory,
+            totalTransactions: this.transactions.length 
+        });
+
         // 해당 상품의 거래 내역만 필터링
         let productTransactions = this.transactions.filter(transaction => 
             transaction.productId === this.currentProductHistory
         );
 
+        console.log('상품별 거래 내역:', productTransactions);
+
         // 날짜 필터 적용
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
 
+        console.log('날짜 필터:', { startDate, endDate });
+
         if (startDate && endDate) {
             productTransactions = productTransactions.filter(transaction => {
                 const transactionDate = this.parseKoreanDate(transaction.timestamp);
-                if (!transactionDate) return false;
+                if (!transactionDate) {
+                    console.log('날짜 파싱 실패:', transaction.timestamp);
+                    return false;
+                }
                 
                 const transactionDateStr = transactionDate.toISOString().split('T')[0];
-                return transactionDateStr >= startDate && transactionDateStr <= endDate;
+                const isInRange = transactionDateStr >= startDate && transactionDateStr <= endDate;
+                console.log('날짜 비교:', { 
+                    transactionDateStr, 
+                    startDate, 
+                    endDate, 
+                    isInRange 
+                });
+                return isInRange;
             });
         }
+
+        console.log('필터링된 거래 내역:', productTransactions);
 
         // 최신순으로 정렬
         productTransactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -1499,7 +1520,7 @@ class LogisticsManager {
     }
 
     // 입출고 처리
-    processTransaction() {
+    async processTransaction() {
         const barcodeInput = document.getElementById('barcodeInput').value.trim();
         const productId = document.getElementById('productSelect').value;
         const quantity = parseInt(document.getElementById('quantityInput').value) || 0;
@@ -1542,9 +1563,16 @@ class LogisticsManager {
         
         this.transactions.push(transaction);
         console.log(`개별 거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${quantity}개`);
-        this.saveData();
-        this.updateInventoryDisplay();
-        this.updateTransactionHistory();
+        
+        try {
+            await this.saveData();
+            this.updateInventoryDisplay();
+            this.updateTransactionHistory();
+            console.log('데이터 저장 및 UI 업데이트 완료');
+        } catch (error) {
+            console.error('데이터 저장 오류:', error);
+            alert('데이터 저장 중 오류가 발생했습니다.');
+        }
         
         // 폼 초기화
         document.getElementById('barcodeInput').value = '';
