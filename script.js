@@ -813,7 +813,7 @@ class LogisticsManager {
         
         // 새로운 출근 기록 생성
         const newRecord = {
-            id: Date.now(),
+            id: Date.now() + Math.floor(Math.random() * 1000), // 정수 ID 생성
             date: selectedDate,
             check_in: selectedTime + ':00', // TIME 형식에 맞춰 초 추가
             check_out: null,
@@ -1143,7 +1143,7 @@ class LogisticsManager {
         } else {
             // 새 상품 추가
             const newProduct = {
-                id: Date.now(),
+                id: Date.now() + Math.floor(Math.random() * 1000), // 정수 ID 생성
                 barcode,
                 name,
                 quantity,
@@ -1568,7 +1568,7 @@ class LogisticsManager {
                 // 거래 기록 추가 (각 상품별로 개별 기록, 현재 시간으로)
                 const currentTime = new Date().toLocaleString('ko-KR');
                 const transaction = {
-                    id: Date.now() + Math.random(), // 고유 ID 생성
+                    id: Date.now() + Math.floor(Math.random() * 1000), // 정수 ID 생성
                     productId: product.id,
                     productName: product.name,
                     product_name: product.name, // Supabase 호환성
@@ -1649,7 +1649,7 @@ class LogisticsManager {
         
         // 거래 기록 추가
         const transaction = {
-            id: Date.now(),
+            id: Date.now() + Math.floor(Math.random() * 1000), // 정수 ID 생성
             productId: product.id,
             productName: product.name,
             product_name: product.name, // Supabase 호환성
@@ -1867,7 +1867,7 @@ class LogisticsManager {
         
         // 포장 기록 추가
         const packingRecord = {
-            id: Date.now(),
+            id: Date.now() + Math.floor(Math.random() * 1000), // 정수 ID 생성
             product_id: product.id,
             productId: product.id,
             product_name: product.name,
@@ -2014,7 +2014,7 @@ class LogisticsManager {
         } else {
             // 새 업무 추가
             const newTask = {
-                id: Date.now(),
+                id: Date.now() + Math.floor(Math.random() * 1000), // 정수 ID 생성
                 name,
                 description,
                 completed: false
