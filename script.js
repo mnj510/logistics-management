@@ -405,8 +405,8 @@ class LogisticsManager {
 
         // 포장
         document.getElementById('packingBarcode').addEventListener('input', (e) => this.handlePackingBarcodeInput(e.target.value));
-        document.getElementById('packBtn').addEventListener('click', () => this.processPacking());
-        document.getElementById('shipBtn').addEventListener('click', () => this.processShipping());
+        document.getElementById('packBtn').addEventListener('click', () => this.processPacking(true)); // 포장 (증가)
+        document.getElementById('shipBtn').addEventListener('click', () => this.processPacking(false)); // 출고 (차감)
         document.getElementById('refreshPackingBtn').addEventListener('click', () => {
             console.log('상품목록 수동 새로고침 시작');
             this.updateProductSelectors(false); // 수동 새로고침 시에는 선택값 보존하지 않음
@@ -525,34 +525,43 @@ class LogisticsManager {
         const currentMonth = now.getMonth() + 1;
         const currentDay = now.getDate();
         
-        // 년도 필터 (2025-2035년) - 기본값은 전체로 설정
+        // 년도 필터 (2025-2035년) - 현재 년도 자동 선택
         yearFilter.innerHTML = '<option value="">전체 년도</option>';
         for (let year = 2025; year <= 2035; year++) {
             const option = document.createElement('option');
             option.value = year;
             option.textContent = `${year}년`;
+            if (year === currentYear) {
+                option.selected = true; // 현재 년도 자동 선택
+            }
             yearFilter.appendChild(option);
         }
         
-        // 월 필터 - 기본값은 전체로 설정
+        // 월 필터 - 현재 월 자동 선택
         monthFilter.innerHTML = '<option value="">전체 월</option>';
         for (let month = 1; month <= 12; month++) {
             const option = document.createElement('option');
             option.value = month;
             option.textContent = `${month}월`;
+            if (month === currentMonth) {
+                option.selected = true; // 현재 월 자동 선택
+            }
             monthFilter.appendChild(option);
         }
         
-        // 일 필터
+        // 일 필터 - 현재 일 자동 선택
         dayFilter.innerHTML = '<option value="">전체 일</option>';
         for (let day = 1; day <= 31; day++) {
             const option = document.createElement('option');
             option.value = day;
             option.textContent = `${day}일`;
+            if (day === currentDay) {
+                option.selected = true; // 현재 일 자동 선택
+            }
             dayFilter.appendChild(option);
         }
         
-        console.log(`포장 내역 필터 초기화: 전체 기간으로 설정`);
+        console.log(`포장 내역 필터 초기화: ${currentYear}년 ${currentMonth}월 ${currentDay}일로 자동 설정`);
     }
 
     // 날짜/시간 선택기 초기화
@@ -1560,12 +1569,16 @@ class LogisticsManager {
         }
     }
 
-    // 포장 처리
-    async processPacking() {
+    // 포장 처리 (isPacking: true=포장, false=출고)
+    async processPacking(isPacking = true) {
         const productId = document.getElementById('packingProduct').value;
-        const quantity = parseInt(document.getElementById('packingQuantity').value) || 0;
+        const inputQuantity = parseInt(document.getElementById('packingQuantity').value) || 0;
         
-        console.log('그로스 포장 처리 시작:', { productId, quantity });
+        // 포장이면 양수, 출고면 음수로 변환
+        const quantity = isPacking ? Math.abs(inputQuantity) : -Math.abs(inputQuantity);
+        const actionName = isPacking ? '포장' : '출고';
+        
+        console.log(`그로스 ${actionName} 처리 시작:`, { productId, quantity });
         console.log('현재 재고 데이터:', this.inventory);
         
         if (!productId || productId === '') {
@@ -1573,8 +1586,8 @@ class LogisticsManager {
             return;
         }
         
-        if (quantity === 0) {
-            alert('수량을 입력해주세요. (양수: 증가, 음수: 차감)');
+        if (inputQuantity <= 0) {
+            alert('수량을 1 이상으로 입력해주세요.');
             return;
         }
         
@@ -1592,12 +1605,12 @@ class LogisticsManager {
             return;
         }
         
-        // 그로스 포장 수량 직접 증감
+        // 그로스 포장 수량 증감
         const currentGrossQty = product.gross_qty || 0;
         const newGrossQty = currentGrossQty + quantity;
         
         if (newGrossQty < 0) {
-            alert(`그로스 포장 수량이 부족합니다.\n현재: ${currentGrossQty}개\n요청 차감: ${Math.abs(quantity)}개`);
+            alert(`그로스 포장 수량이 부족합니다.\n현재: ${currentGrossQty}개\n요청 ${actionName}: ${Math.abs(quantity)}개`);
             return;
         }
         
@@ -1611,7 +1624,7 @@ class LogisticsManager {
             product_name: product.name,
             productName: product.name,
             quantity: quantity,
-            status: quantity > 0 ? '포장완료' : '출고완료',
+            status: isPacking ? '포장완료' : '출고완료',
             timestamp: new Date().toLocaleString('ko-KR')
         };
         
@@ -1628,23 +1641,15 @@ class LogisticsManager {
             document.getElementById('packingProduct').value = '';
             document.getElementById('packingQuantity').value = '1';
             
-            const action = quantity > 0 ? '증가' : '차감';
-            alert(`그로스 포장 ${action} 완료!\n- ${product.name}: ${Math.abs(quantity)}개 ${action}\n- 현재 그로스 포장: ${product.gross_qty}개`);
-            console.log('그로스 포장 처리 완료');
+            alert(`그로스 ${actionName} 완료!\n- ${product.name}: ${Math.abs(quantity)}개 ${actionName}\n- 현재 그로스 포장: ${product.gross_qty}개`);
+            console.log(`그로스 ${actionName} 처리 완료`);
         } catch (error) {
-            console.error('그로스 포장 처리 오류:', error);
-            alert('그로스 포장 처리 중 오류가 발생했습니다.');
+            console.error(`그로스 ${actionName} 처리 오류:`, error);
+            alert(`그로스 ${actionName} 처리 중 오류가 발생했습니다.`);
         }
     }
 
-    // 출고 처리 (음수 입력으로 대체)
-    async processShipping() {
-        alert('출고 처리는 포장 수량에 음수(-) 값을 입력해주세요.\n\n예시:\n- 포장: +10 (10개 증가)\n- 출고: -5 (5개 차감)');
-        
-        // 포장 수량 입력 필드에 포커스
-        document.getElementById('packingQuantity').focus();
-        document.getElementById('packingQuantity').select();
-    }
+
 
     // 포장 내역 업데이트 (필터링 지원)
     updatePackingHistory(filteredRecords = null) {
@@ -1662,7 +1667,7 @@ class LogisticsManager {
             records: this.packingRecords 
         });
         
-        let recordsToShow = filteredRecords || this.packingRecords.slice(-3).reverse(); // 최근 3개만 표시
+        let recordsToShow = filteredRecords || this.packingRecords.slice().reverse(); // 모든 데이터 표시 (최신순)
         
         tbody.innerHTML = '';
         

@@ -651,7 +651,7 @@ tbody tr:hover {
 }
 
 .packing-history .table-container {
-    max-height: 200px; /* 3줄 정도 높이 */
+    max-height: 400px; /* 더 많은 데이터를 볼 수 있도록 높이 증가 */
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 8px;
