@@ -1357,17 +1357,19 @@ class LogisticsManager {
                     product.quantity -= item.quantity;
                 }
                 
-                // 거래 기록 추가
+                // 거래 기록 추가 (각 상품별로 개별 기록)
                 const transaction = {
                     id: Date.now() + Math.random(), // 고유 ID 생성
                     productId: product.id,
                     productName: product.name,
+                    product_name: product.name, // Supabase 호환성
                     type: type === 'in' ? '입고' : '출고',
                     quantity: item.quantity,
                     timestamp: new Date().toLocaleString('ko-KR')
                 };
                 
                 this.transactions.push(transaction);
+                console.log(`거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${item.quantity}개`);
             }
             
             await this.saveData();
@@ -1438,12 +1440,14 @@ class LogisticsManager {
             id: Date.now(),
             productId: product.id,
             productName: product.name,
+            product_name: product.name, // Supabase 호환성
             type: type === 'in' ? '입고' : '출고',
             quantity,
             timestamp: new Date().toLocaleString('ko-KR')
         };
         
         this.transactions.push(transaction);
+        console.log(`개별 거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${quantity}개`);
         this.saveData();
         this.updateInventoryDisplay();
         this.updateTransactionHistory();
@@ -1466,7 +1470,13 @@ class LogisticsManager {
             this.transactions = [];
         }
         
-        let transactionsToShow = filteredTransactions || this.transactions.slice(-50).reverse(); // 최근 50개 또는 필터된 결과
+        console.log('입출고 내역 업데이트:', { 
+            totalTransactions: this.transactions.length, 
+            filteredTransactions: filteredTransactions ? filteredTransactions.length : null,
+            transactions: this.transactions 
+        });
+        
+        let transactionsToShow = filteredTransactions || this.transactions.slice(-5).reverse(); // 최근 5개만 표시
         
         tbody.innerHTML = '';
         
@@ -1475,16 +1485,14 @@ class LogisticsManager {
             return;
         }
         
-        // 상품별로 그룹화
-        const groupedTransactions = this.groupTransactionsByProduct(transactionsToShow);
-        
-        groupedTransactions.forEach(group => {
+        // 개별 거래 기록 모두 표시 (그룹화 제거)
+        transactionsToShow.forEach(transaction => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${group.timestamp}</td>
-                <td>${group.productName || group.product_name || 'Unknown Product'}</td>
-                <td>${group.type}</td>
-                <td>${group.quantity}</td>
+                <td>${transaction.timestamp}</td>
+                <td>${transaction.productName || transaction.product_name || 'Unknown Product'}</td>
+                <td>${transaction.type}</td>
+                <td>${transaction.quantity}</td>
             `;
             tbody.appendChild(row);
         });
