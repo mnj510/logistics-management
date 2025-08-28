@@ -261,15 +261,15 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="packingQuantity">포장 수량:</label>
-                    <input type="number" id="packingQuantity" min="1" value="1">
+                    <label for="packingQuantity">수량 (양수: 증가, 음수: 차감):</label>
+                    <input type="number" id="packingQuantity" value="1" placeholder="예: 10 (증가) 또는 -5 (차감)">
                 </div>
                 <div class="action-buttons">
                     <button class="btn btn-success" id="packBtn">
-                        <i class="fas fa-box"></i> 포장
+                        <i class="fas fa-plus-minus"></i> 그로스 포장 증감
                     </button>
-                    <button class="btn btn-warning" id="shipBtn">
-                        <i class="fas fa-shipping-fast"></i> 출고
+                    <button class="btn btn-info" id="shipBtn">
+                        <i class="fas fa-question-circle"></i> 사용법
                     </button>
                 </div>
             </div>
