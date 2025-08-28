@@ -215,9 +215,58 @@ class LogisticsManager {
         if (!data || data.length === 0) return;
         
         try {
+            // 테이블별로 필요한 컬럼만 필터링
+            let cleanedData = data;
+            
+            if (tableName === 'attendance_records') {
+                cleanedData = data.map(record => ({
+                    id: record.id,
+                    date: record.date,
+                    check_in: record.check_in,
+                    check_out: record.check_out,
+                    work_hours: record.work_hours || 0
+                }));
+            } else if (tableName === 'inventory') {
+                cleanedData = data.map(record => ({
+                    id: record.id,
+                    barcode: record.barcode,
+                    name: record.name,
+                    quantity: record.quantity || 0,
+                    unit: record.unit || '개'
+                }));
+            } else if (tableName === 'transactions') {
+                cleanedData = data.map(record => ({
+                    id: record.id,
+                    product_id: record.product_id || record.productId,
+                    product_name: record.product_name || record.productName,
+                    type: record.type,
+                    quantity: record.quantity,
+                    timestamp: record.timestamp
+                }));
+            } else if (tableName === 'packing_records') {
+                cleanedData = data.map(record => ({
+                    id: record.id,
+                    product_id: record.product_id || record.productId,
+                    product_name: record.product_name || record.productName,
+                    quantity: record.quantity,
+                    status: record.status || '포장완료',
+                    timestamp: record.timestamp,
+                    shipped_at: record.shipped_at || record.shippedAt
+                }));
+            } else if (tableName === 'tasks') {
+                cleanedData = data.map(record => ({
+                    id: record.id,
+                    name: record.name,
+                    description: record.description,
+                    completed: record.completed || false
+                }));
+            }
+            
+            console.log(`${tableName} 정리된 데이터:`, cleanedData);
+            
             const { data: result, error } = await this.supabase
                 .from(tableName)
-                .upsert(data, { 
+                .upsert(cleanedData, { 
                     onConflict: 'id',
                     ignoreDuplicates: false 
                 });
@@ -448,7 +497,7 @@ class LogisticsManager {
         const newRecord = {
             id: Date.now(),
             date: today,
-            check_in: selectedTime, // Supabase 테이블 컬럼명에 맞춤
+            check_in: selectedTime + ':00', // TIME 형식에 맞춰 초 추가
             check_out: null,
             work_hours: 0
         };
@@ -487,10 +536,12 @@ class LogisticsManager {
         
         console.log('퇴근 처리할 기록:', record);
         
-        record.check_out = selectedTime;
-        record.checkOut = selectedTime; // 호환성을 위해 둘 다 설정
+        record.check_out = selectedTime + ':00'; // TIME 형식에 맞춰 초 추가
         record.work_hours = this.calculateWorkHours(record.check_in || record.checkIn, selectedTime);
-        record.workHours = record.work_hours; // 호환성을 위해 둘 다 설정
+        
+        // 표시용 속성도 업데이트 (로컬 표시용)
+        record.checkOut = selectedTime;
+        record.workHours = record.work_hours;
         
         try {
             await this.saveData();
@@ -524,6 +575,16 @@ class LogisticsManager {
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
         return `${hours}시간 ${mins}분`;
+    }
+
+    // 시간 표시 형식 변환 (00:40:00 -> 00:40)
+    formatTime(timeString) {
+        if (!timeString) return '';
+        if (timeString.includes(':')) {
+            const parts = timeString.split(':');
+            return `${parts[0]}:${parts[1]}`; // 초 부분 제거
+        }
+        return timeString;
     }
 
     // 출퇴근 기록 필터링
@@ -573,8 +634,8 @@ class LogisticsManager {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${record.date}</td>
-                <td>${record.check_in || record.checkIn || '-'}</td>
-                <td>${record.check_out || record.checkOut || '-'}</td>
+                <td>${this.formatTime(record.check_in || record.checkIn) || '-'}</td>
+                <td>${this.formatTime(record.check_out || record.checkOut) || '-'}</td>
                 <td>${(record.work_hours || record.workHours) ? this.formatMinutes(record.work_hours || record.workHours) : '-'}</td>
                 <td class="admin-only" style="display: ${this.isAdminMode ? 'table-cell' : 'none'}">
                     <button class="btn btn-danger" onclick="logisticsManager.deleteAttendanceRecord(${record.id})">
