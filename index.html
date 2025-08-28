@@ -56,6 +56,20 @@
             </div>
             
             <div class="attendance-controls">
+                <div class="date-selector">
+                    <label>날짜 선택:</label>
+                    <div class="date-inputs">
+                        <select id="attendanceYear">
+                            <option value="">년도</option>
+                        </select>
+                        <select id="attendanceMonth">
+                            <option value="">월</option>
+                        </select>
+                        <select id="attendanceDay">
+                            <option value="">일</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="time-selector">
                     <label>시간 선택:</label>
                     <div class="time-inputs">
@@ -67,9 +81,6 @@
                             <option value="">분</option>
                         </select>
                     </div>
-                </div>
-                <div class="current-date">
-                    <span id="currentDate"></span>
                 </div>
                 <div class="action-buttons">
                     <button class="btn btn-primary" id="checkInBtn">

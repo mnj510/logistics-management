@@ -177,18 +177,8 @@ class LogisticsManager {
                 console.log('UI 업데이트 완료');
             }, 100);
             
-            // 추가로 3초 후에도 한 번 더 업데이트 (Supabase 데이터 완전 로드 보장)
-            // 단, 사용자가 이미 선택한 경우는 제외
-            setTimeout(() => {
-                console.log('지연 상품 선택기 업데이트 확인...');
-                const packingProductSelect = document.getElementById('packingProduct');
-                if (!packingProductSelect || !packingProductSelect.value) {
-                    console.log('상품이 선택되지 않아서 업데이트 실행');
-                    this.updateProductSelectors();
-                } else {
-                    console.log('이미 상품이 선택되어 있어서 업데이트 건너뜀');
-                }
-            }, 3000);
+            // 자동 업데이트 제거 - 상품 선택 사라짐 문제 방지
+            // 필요시 수동으로만 "상품목록 새로고침" 버튼 사용
             
         } catch (error) {
             console.error('Supabase에서 데이터 로드 실패:', error);
@@ -463,11 +453,87 @@ class LogisticsManager {
         this.updateTaskDisplay();
     }
 
-    // 시간 선택기 초기화 (시간/분 분리)
+    // 날짜/시간 선택기 초기화
     initializeTimeSelector() {
+        this.initializeDateSelector();
+        this.initializeHourMinuteSelector();
+    }
+    
+    // 날짜 선택기 초기화
+    initializeDateSelector() {
+        const yearSelector = document.getElementById('attendanceYear');
+        const monthSelector = document.getElementById('attendanceMonth');
+        const daySelector = document.getElementById('attendanceDay');
+        
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const currentDay = now.getDate();
+        
+        // 년도 옵션 생성 (현재 년도 ±2년)
+        yearSelector.innerHTML = '<option value="">년도</option>';
+        for (let year = currentYear - 2; year <= currentYear + 2; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = `${year}년`;
+            yearSelector.appendChild(option);
+        }
+        yearSelector.value = currentYear;
+        
+        // 월 옵션 생성
+        monthSelector.innerHTML = '<option value="">월</option>';
+        for (let month = 1; month <= 12; month++) {
+            const option = document.createElement('option');
+            option.value = month;
+            option.textContent = `${month}월`;
+            monthSelector.appendChild(option);
+        }
+        monthSelector.value = currentMonth;
+        
+        // 일 옵션 생성
+        this.updateAttendanceDaySelector();
+        daySelector.value = currentDay;
+        
+        // 년/월 변경 시 일 옵션 업데이트
+        yearSelector.addEventListener('change', () => this.updateAttendanceDaySelector());
+        monthSelector.addEventListener('change', () => this.updateAttendanceDaySelector());
+    }
+    
+    // 출퇴근용 일 선택기 업데이트
+    updateAttendanceDaySelector() {
+        const yearSelector = document.getElementById('attendanceYear');
+        const monthSelector = document.getElementById('attendanceMonth');
+        const daySelector = document.getElementById('attendanceDay');
+        
+        const year = parseInt(yearSelector.value);
+        const month = parseInt(monthSelector.value);
+        
+        if (!year || !month) {
+            daySelector.innerHTML = '<option value="">일</option>';
+            return;
+        }
+        
+        const currentValue = daySelector.value;
+        const daysInMonth = new Date(year, month, 0).getDate();
+        
+        daySelector.innerHTML = '<option value="">일</option>';
+        for (let day = 1; day <= daysInMonth; day++) {
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = `${day}일`;
+            daySelector.appendChild(option);
+        }
+        
+        // 이전 선택값 복원 (가능한 경우)
+        if (currentValue && currentValue <= daysInMonth) {
+            daySelector.value = currentValue;
+        }
+    }
+    
+    // 시간/분 선택기 초기화
+    initializeHourMinuteSelector() {
         const hourSelector = document.getElementById('attendanceHour');
         const minuteSelector = document.getElementById('attendanceMinute');
-        const currentDateSpan = document.getElementById('currentDate');
         
         // 시간 옵션 생성
         hourSelector.innerHTML = '<option value="">시</option>';
@@ -494,11 +560,6 @@ class LogisticsManager {
         
         hourSelector.value = currentHour.toString().padStart(2, '0');
         minuteSelector.value = currentMinute.toString().padStart(2, '0');
-        
-        // 현재 날짜 표시
-        const today = new Date();
-        const dateStr = `${today.getFullYear()}년 ${(today.getMonth() + 1).toString().padStart(2, '0')}월 ${today.getDate().toString().padStart(2, '0')}일`;
-        currentDateSpan.textContent = dateStr;
     }
 
     // 날짜 필터 초기화
@@ -574,8 +635,16 @@ class LogisticsManager {
 
     // 출근 처리
     async checkIn() {
+        const yearSelector = document.getElementById('attendanceYear');
+        const monthSelector = document.getElementById('attendanceMonth');
+        const daySelector = document.getElementById('attendanceDay');
         const hourSelector = document.getElementById('attendanceHour');
         const minuteSelector = document.getElementById('attendanceMinute');
+        
+        if (!yearSelector.value || !monthSelector.value || !daySelector.value) {
+            alert('날짜를 모두 선택해주세요.');
+            return;
+        }
         
         if (!hourSelector.value || !minuteSelector.value) {
             alert('시간과 분을 모두 선택해주세요.');
@@ -583,24 +652,24 @@ class LogisticsManager {
         }
         
         const selectedTime = `${hourSelector.value}:${minuteSelector.value}`;
-        const today = new Date().toISOString().split('T')[0];
+        const selectedDate = `${yearSelector.value}-${monthSelector.value.toString().padStart(2, '0')}-${daySelector.value.toString().padStart(2, '0')}`;
         
-        console.log('출근 처리 시작:', { selectedTime, today });
+        console.log('출근 처리 시작:', { selectedTime, selectedDate });
         
-        // 오늘 이미 출근했는지 확인
+        // 선택한 날짜에 이미 출근했는지 확인
         const existingRecord = this.attendanceRecords.find(record => 
-            record.date === today && (record.check_in || record.checkIn)
+            record.date === selectedDate && (record.check_in || record.checkIn)
         );
         
         if (existingRecord && !(existingRecord.check_out || existingRecord.checkOut)) {
-            alert('이미 출근 처리되었습니다.');
+            alert('해당 날짜에 이미 출근 처리되었습니다.');
             return;
         }
         
         // 새로운 출근 기록 생성
         const newRecord = {
             id: Date.now(),
-            date: today,
+            date: selectedDate,
             check_in: selectedTime + ':00', // TIME 형식에 맞춰 초 추가
             check_out: null,
             work_hours: 0
@@ -613,7 +682,7 @@ class LogisticsManager {
         try {
             await this.saveData();
             this.updateAttendanceDisplay();
-            alert(`${selectedTime}에 출근 처리되었습니다.`);
+            alert(`출근 처리 완료!\n날짜: ${selectedDate}\n시간: ${selectedTime}`);
             console.log('출근 처리 완료');
         } catch (error) {
             console.error('출근 처리 오류:', error);
@@ -623,8 +692,16 @@ class LogisticsManager {
 
     // 퇴근 처리
     async checkOut() {
+        const yearSelector = document.getElementById('attendanceYear');
+        const monthSelector = document.getElementById('attendanceMonth');
+        const daySelector = document.getElementById('attendanceDay');
         const hourSelector = document.getElementById('attendanceHour');
         const minuteSelector = document.getElementById('attendanceMinute');
+        
+        if (!yearSelector.value || !monthSelector.value || !daySelector.value) {
+            alert('날짜를 모두 선택해주세요.');
+            return;
+        }
         
         if (!hourSelector.value || !minuteSelector.value) {
             alert('시간과 분을 모두 선택해주세요.');
@@ -632,17 +709,17 @@ class LogisticsManager {
         }
         
         const selectedTime = `${hourSelector.value}:${minuteSelector.value}`;
-        const today = new Date().toISOString().split('T')[0];
+        const selectedDate = `${yearSelector.value}-${monthSelector.value.toString().padStart(2, '0')}-${daySelector.value.toString().padStart(2, '0')}`;
         
-        console.log('퇴근 처리 시작:', { selectedTime, today });
+        console.log('퇴근 처리 시작:', { selectedTime, selectedDate });
         
-        // 오늘 출근했지만 퇴근하지 않은 기록 찾기
+        // 선택한 날짜에 출근했지만 퇴근하지 않은 기록 찾기
         const record = this.attendanceRecords.find(record => 
-            record.date === today && (record.checkIn || record.check_in) && !(record.checkOut || record.check_out)
+            record.date === selectedDate && (record.checkIn || record.check_in) && !(record.checkOut || record.check_out)
         );
         
         if (!record) {
-            alert('출근 기록이 없습니다.');
+            alert('해당 날짜에 출근 기록이 없습니다. 먼저 출근 처리를 해주세요.');
             return;
         }
         
@@ -658,7 +735,9 @@ class LogisticsManager {
         try {
             await this.saveData();
             this.updateAttendanceDisplay();
-            alert(`${selectedTime}에 퇴근 처리되었습니다.`);
+            const workHours = Math.floor(record.work_hours / 60);
+            const workMinutes = record.work_hours % 60;
+            alert(`퇴근 처리 완료!\n날짜: ${selectedDate}\n퇴근시간: ${selectedTime}\n근무시간: ${workHours}시간 ${workMinutes}분`);
             console.log('퇴근 처리 완료');
         } catch (error) {
             console.error('퇴근 처리 오류:', error);
@@ -888,7 +967,8 @@ class LogisticsManager {
         
         this.saveData();
         this.updateInventoryDisplay();
-        this.updateProductSelectors();
+        // 상품 추가/수정 후에만 선택기 업데이트 (선택값 보존)
+        this.updateProductSelectors(true);
         this.hideProductModal();
     }
 
