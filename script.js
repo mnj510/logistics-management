@@ -178,9 +178,16 @@ class LogisticsManager {
             }, 100);
             
             // 추가로 3초 후에도 한 번 더 업데이트 (Supabase 데이터 완전 로드 보장)
+            // 단, 사용자가 이미 선택한 경우는 제외
             setTimeout(() => {
-                console.log('지연 상품 선택기 업데이트...');
-                this.updateProductSelectors();
+                console.log('지연 상품 선택기 업데이트 확인...');
+                const packingProductSelect = document.getElementById('packingProduct');
+                if (!packingProductSelect || !packingProductSelect.value) {
+                    console.log('상품이 선택되지 않아서 업데이트 실행');
+                    this.updateProductSelectors();
+                } else {
+                    console.log('이미 상품이 선택되어 있어서 업데이트 건너뜀');
+                }
             }, 3000);
             
         } catch (error) {
@@ -407,7 +414,7 @@ class LogisticsManager {
         document.getElementById('shipBtn').addEventListener('click', () => this.processShipping());
         document.getElementById('refreshPackingBtn').addEventListener('click', () => {
             console.log('상품목록 수동 새로고침 시작');
-            this.updateProductSelectors();
+            this.updateProductSelectors(false); // 수동 새로고침 시에는 선택값 보존하지 않음
             alert('상품목록을 새로고침했습니다.');
         });
 
@@ -942,8 +949,8 @@ class LogisticsManager {
         }
     }
 
-    // 상품 선택기 업데이트
-    updateProductSelectors() {
+    // 상품 선택기 업데이트 (현재 선택값 보존)
+    updateProductSelectors(preserveSelection = true) {
         const selectors = ['packingProduct']; 
         
         console.log('상품 선택기 업데이트 시작, 재고 데이터:', this.inventory);
@@ -960,6 +967,10 @@ class LogisticsManager {
                 console.error(`선택기를 찾을 수 없음: ${selectorId}`);
                 return;
             }
+            
+            // 현재 선택된 값 저장 (보존 옵션이 true인 경우)
+            const currentValue = preserveSelection ? selector.value : '';
+            console.log(`${selectorId} 현재 선택값:`, currentValue);
             
             console.log(`${selectorId} 선택기 업데이트 중...`);
             selector.innerHTML = '<option value="">상품을 선택하세요</option>';
@@ -981,6 +992,17 @@ class LogisticsManager {
                 selector.appendChild(option);
                 console.log(`상품 추가됨: ${product.name} (ID: ${product.id})`);
             });
+            
+            // 이전 선택값 복원 (해당 상품이 여전히 존재하는 경우)
+            if (preserveSelection && currentValue) {
+                const optionExists = Array.from(selector.options).some(option => option.value === currentValue);
+                if (optionExists) {
+                    selector.value = currentValue;
+                    console.log(`${selectorId} 이전 선택값 복원됨:`, currentValue);
+                } else {
+                    console.log(`${selectorId} 이전 선택값이 더 이상 존재하지 않음:`, currentValue);
+                }
+            }
             
             console.log(`${selectorId} 선택기 업데이트 완료, 총 ${this.inventory.length}개 상품`);
         });
@@ -1279,10 +1301,11 @@ class LogisticsManager {
                     if (option) {
                         packingProductSelect.value = product.id;
                     } else {
-                        // 옵션이 없으면 상품 선택기 업데이트 후 설정
-                        this.updateProductSelectors();
+                        // 옵션이 없으면 상품 선택기 업데이트 후 설정 (선택값 보존하지 않음)
+                        this.updateProductSelectors(false);
                         setTimeout(() => {
                             packingProductSelect.value = product.id;
+                            console.log('바코드 스캔으로 상품 선택됨:', product.name);
                         }, 100);
                     }
                 }
