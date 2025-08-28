@@ -488,8 +488,12 @@ class LogisticsManager {
         const monthFilter = document.getElementById('monthFilter');
         const dayFilter = document.getElementById('dayFilter');
         
+        // 현재 날짜 정보 가져오기
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        
         // 년도 필터 (현재 년도 기준 ±2년)
-        const currentYear = new Date().getFullYear();
         yearFilter.innerHTML = '<option value="">전체</option>';
         for (let year = currentYear - 2; year <= currentYear + 2; year++) {
             const option = document.createElement('option');
@@ -497,10 +501,7 @@ class LogisticsManager {
             option.textContent = `${year}년`;
             yearFilter.appendChild(option);
         }
-        // 현재 날짜로 기본 설정
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;
+        // 현재 연도로 기본 설정
         yearFilter.value = currentYear;
 
         // 월 필터
