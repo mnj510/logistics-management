@@ -1100,7 +1100,27 @@ class LogisticsManager {
             
             console.log('삭제 후 출퇴근 기록 수:', this.attendanceRecords.length);
             
-            // 데이터 저장
+            // Supabase에서 실제 삭제
+            if (this.supabase) {
+                try {
+                    const { error } = await this.supabase
+                        .from('attendance_records')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) {
+                        console.error('Supabase에서 출퇴근 기록 삭제 실패:', error);
+                        throw error;
+                    }
+                    console.log('Supabase에서 출퇴근 기록 삭제 완료');
+                } catch (error) {
+                    console.error('Supabase 삭제 오류:', error);
+                    alert('Supabase에서 삭제 중 오류가 발생했습니다.');
+                    return;
+                }
+            }
+            
+            // 로컬 데이터 저장
             await this.saveData();
             console.log('출퇴근 기록 삭제 및 데이터 저장 완료');
             
@@ -1250,12 +1270,71 @@ class LogisticsManager {
     }
 
     // 상품 삭제
-    deleteProduct(id) {
-        if (confirm('정말로 이 상품을 삭제하시겠습니까?')) {
+    async deleteProduct(id) {
+        console.log('상품 삭제 시도:', { id, isAdminMode: this.isAdminMode });
+        
+        if (!this.isAdminMode) {
+            console.log('관리자 모드가 아닙니다. 삭제 불가.');
+            alert('관리자 모드에서만 삭제할 수 있습니다.');
+            return;
+        }
+        
+        if (!confirm('정말로 이 상품을 삭제하시겠습니까?')) {
+            console.log('사용자가 삭제를 취소했습니다.');
+            return;
+        }
+        
+        try {
+            console.log('삭제 전 상품 수:', this.inventory.length);
+            
+            // 해당 ID의 상품 찾기
+            const productToDelete = this.inventory.find(product => product.id === id);
+            if (!productToDelete) {
+                console.error('삭제할 상품을 찾을 수 없습니다:', id);
+                alert('삭제할 상품을 찾을 수 없습니다.');
+                return;
+            }
+            
+            console.log('삭제할 상품:', productToDelete);
+            
+            // Supabase에서 실제 삭제
+            if (this.supabase) {
+                try {
+                    const { error } = await this.supabase
+                        .from('inventory')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) {
+                        console.error('Supabase에서 상품 삭제 실패:', error);
+                        throw error;
+                    }
+                    console.log('Supabase에서 상품 삭제 완료');
+                } catch (error) {
+                    console.error('Supabase 삭제 오류:', error);
+                    alert('Supabase에서 삭제 중 오류가 발생했습니다.');
+                    return;
+                }
+            }
+            
+            // 로컬 데이터에서 삭제
             this.inventory = this.inventory.filter(product => product.id !== id);
-            this.saveData();
+            
+            console.log('삭제 후 상품 수:', this.inventory.length);
+            
+            // 로컬 데이터 저장
+            await this.saveData();
+            console.log('상품 삭제 및 데이터 저장 완료');
+            
+            // UI 업데이트
             this.updateInventoryDisplay();
             this.updateProductSelectors();
+            
+            alert('상품이 삭제되었습니다.');
+            
+        } catch (error) {
+            console.error('상품 삭제 오류:', error);
+            alert('상품 삭제 중 오류가 발생했습니다.');
         }
     }
 
@@ -2325,12 +2404,32 @@ class LogisticsManager {
             
             console.log('삭제할 업무:', taskToDelete);
             
-            // 업무 삭제
+            // Supabase에서 실제 삭제
+            if (this.supabase) {
+                try {
+                    const { error } = await this.supabase
+                        .from('tasks')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) {
+                        console.error('Supabase에서 업무 삭제 실패:', error);
+                        throw error;
+                    }
+                    console.log('Supabase에서 업무 삭제 완료');
+                } catch (error) {
+                    console.error('Supabase 삭제 오류:', error);
+                    alert('Supabase에서 삭제 중 오류가 발생했습니다.');
+                    return;
+                }
+            }
+            
+            // 로컬 데이터에서 삭제
             this.tasks = this.tasks.filter(task => task.id !== id);
             
             console.log('삭제 후 업무 수:', this.tasks.length);
             
-            // 데이터 저장
+            // 로컬 데이터 저장
             await this.saveData();
             console.log('업무 삭제 및 데이터 저장 완료');
             
