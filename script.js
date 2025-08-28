@@ -1421,7 +1421,7 @@ class LogisticsManager {
         taskList.innerHTML = '';
         this.tasks.forEach(task => {
             const taskItem = document.createElement('div');
-            taskItem.className = 'task-item';
+            taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
             taskItem.innerHTML = `
                 <div class="task-content">
                     <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
@@ -1442,14 +1442,88 @@ class LogisticsManager {
             `;
             taskList.appendChild(taskItem);
         });
+        
+        // 진행률 업데이트
+        this.updateTaskProgress();
+    }
+
+    // 업무 진행률 업데이트
+    updateTaskProgress() {
+        if (!this.tasks || this.tasks.length === 0) {
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressPercentage').textContent = '0%';
+            document.getElementById('progressStatus').textContent = '0/0 완료';
+            return;
+        }
+        
+        const totalTasks = this.tasks.length;
+        const completedTasks = this.tasks.filter(task => task.completed).length;
+        const progressPercentage = Math.round((completedTasks / totalTasks) * 100);
+        
+        // 진행률 바 업데이트
+        const progressFill = document.getElementById('progressFill');
+        const progressPercentageEl = document.getElementById('progressPercentage');
+        const progressStatusEl = document.getElementById('progressStatus');
+        
+        // 애니메이션 효과
+        setTimeout(() => {
+            progressFill.style.width = `${progressPercentage}%`;
+        }, 100);
+        
+        progressPercentageEl.textContent = `${progressPercentage}%`;
+        progressStatusEl.textContent = `${completedTasks}/${totalTasks} 완료`;
+        
+        // 완료 시 축하 효과
+        if (completedTasks === totalTasks && totalTasks > 0) {
+            this.celebrateCompletion();
+        }
+    }
+
+    // 완료 축하 효과
+    celebrateCompletion() {
+        const progressFill = document.getElementById('progressFill');
+        progressFill.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+        
+        // 3초 후 원래 색상으로 복원
+        setTimeout(() => {
+            progressFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
+        }, 3000);
+        
+        // 완료 알림 (선택적)
+        if (this.tasks.length > 0) {
+            setTimeout(() => {
+                alert('🎉 오늘의 모든 업무를 완료했습니다! 수고하셨습니다!');
+            }, 500);
+        }
     }
 
     // 업무 완료 상태 토글
-    toggleTask(id) {
+    async toggleTask(id) {
         const task = this.tasks.find(t => t.id === id);
         if (task) {
             task.completed = !task.completed;
-            this.saveData();
+            
+            try {
+                await this.saveData();
+                this.updateTaskDisplay();
+                
+                // 완료 시 시각적 피드백
+                if (task.completed) {
+                    // 체크박스에 성공 효과 추가
+                    const checkbox = document.querySelector(`input[onchange*="${id}"]`);
+                    if (checkbox) {
+                        checkbox.style.transform = 'scale(1.3)';
+                        setTimeout(() => {
+                            checkbox.style.transform = 'scale(1.2)';
+                        }, 200);
+                    }
+                }
+            } catch (error) {
+                console.error('업무 상태 업데이트 오류:', error);
+                // 오류 시 원래 상태로 복원
+                task.completed = !task.completed;
+                this.updateTaskDisplay();
+            }
         }
     }
 
