@@ -211,7 +211,21 @@
             </div>
 
             <div class="transaction-history">
-                <h3>입출고 내역</h3>
+                <div class="history-header">
+                    <h3>입출고 내역</h3>
+                    <div class="date-filter-controls">
+                        <select id="transactionYearFilter">
+                            <option value="">전체 년도</option>
+                        </select>
+                        <select id="transactionMonthFilter">
+                            <option value="">전체 월</option>
+                        </select>
+                        <select id="transactionDayFilter">
+                            <option value="">전체 일</option>
+                        </select>
+                        <button class="btn btn-info btn-sm" id="filterTransactionBtn">필터 적용</button>
+                    </div>
+                </div>
                 <table id="transactionTable">
                     <thead>
                         <tr>
@@ -261,7 +275,21 @@
             </div>
 
             <div class="packing-history">
-                <h3>포장 내역</h3>
+                <div class="history-header">
+                    <h3>포장 내역</h3>
+                    <div class="date-filter-controls">
+                        <select id="packingYearFilter">
+                            <option value="">전체 년도</option>
+                        </select>
+                        <select id="packingMonthFilter">
+                            <option value="">전체 월</option>
+                        </select>
+                        <select id="packingDayFilter">
+                            <option value="">전체 일</option>
+                        </select>
+                        <button class="btn btn-info btn-sm" id="filterPackingBtn">필터 적용</button>
+                    </div>
+                </div>
                 <table id="packingTable">
                     <thead>
                         <tr>

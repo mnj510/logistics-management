@@ -22,6 +22,7 @@ class LogisticsManager {
         this.setupEventListeners();
         this.initializeTimeSelector();
         this.initializeDateFilters();
+        this.initializeHistoryFilters();
         
         // 비동기 데이터 로딩 및 UI 업데이트
         this.initializeApp();
@@ -353,6 +354,10 @@ class LogisticsManager {
         document.getElementById('filterBtn').addEventListener('click', () => this.filterAttendance());
         document.getElementById('refreshBtn').addEventListener('click', () => this.refreshData());
         
+        // 내역 필터 버튼
+        document.getElementById('filterTransactionBtn').addEventListener('click', () => this.filterTransactionHistory());
+        document.getElementById('filterPackingBtn').addEventListener('click', () => this.filterPackingHistory());
+        
         // 데이터 새로고침 기능 (5초마다 자동 새로고침)
         setInterval(() => this.refreshData(), 5000);
 
@@ -451,6 +456,90 @@ class LogisticsManager {
         
         this.updateAttendanceDisplay();
         this.updateTaskDisplay();
+    }
+
+    // 내역 필터 초기화
+    initializeHistoryFilters() {
+        this.initializeTransactionFilter();
+        this.initializePackingFilter();
+    }
+    
+    // 입출고 내역 필터 초기화
+    initializeTransactionFilter() {
+        const yearFilter = document.getElementById('transactionYearFilter');
+        const monthFilter = document.getElementById('transactionMonthFilter');
+        const dayFilter = document.getElementById('transactionDayFilter');
+        
+        if (!yearFilter || !monthFilter || !dayFilter) return;
+        
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        
+        // 년도 필터
+        yearFilter.innerHTML = '<option value="">전체 년도</option>';
+        for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = `${year}년`;
+            yearFilter.appendChild(option);
+        }
+        
+        // 월 필터
+        monthFilter.innerHTML = '<option value="">전체 월</option>';
+        for (let month = 1; month <= 12; month++) {
+            const option = document.createElement('option');
+            option.value = month;
+            option.textContent = `${month}월`;
+            monthFilter.appendChild(option);
+        }
+        
+        // 일 필터
+        dayFilter.innerHTML = '<option value="">전체 일</option>';
+        for (let day = 1; day <= 31; day++) {
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = `${day}일`;
+            dayFilter.appendChild(option);
+        }
+    }
+    
+    // 포장 내역 필터 초기화
+    initializePackingFilter() {
+        const yearFilter = document.getElementById('packingYearFilter');
+        const monthFilter = document.getElementById('packingMonthFilter');
+        const dayFilter = document.getElementById('packingDayFilter');
+        
+        if (!yearFilter || !monthFilter || !dayFilter) return;
+        
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        
+        // 년도 필터
+        yearFilter.innerHTML = '<option value="">전체 년도</option>';
+        for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = `${year}년`;
+            yearFilter.appendChild(option);
+        }
+        
+        // 월 필터
+        monthFilter.innerHTML = '<option value="">전체 월</option>';
+        for (let month = 1; month <= 12; month++) {
+            const option = document.createElement('option');
+            option.value = month;
+            option.textContent = `${month}월`;
+            monthFilter.appendChild(option);
+        }
+        
+        // 일 필터
+        dayFilter.innerHTML = '<option value="">전체 일</option>';
+        for (let day = 1; day <= 31; day++) {
+            const option = document.createElement('option');
+            option.value = day;
+            option.textContent = `${day}일`;
+            dayFilter.appendChild(option);
+        }
     }
 
     // 날짜/시간 선택기 초기화
@@ -1344,8 +1433,8 @@ class LogisticsManager {
         alert(`${transaction.type} 처리가 완료되었습니다.`);
     }
 
-    // 거래 내역 업데이트
-    updateTransactionHistory() {
+    // 거래 내역 업데이트 (필터링 지원)
+    updateTransactionHistory(filteredTransactions = null) {
         const tbody = document.querySelector('#transactionTable tbody');
         if (!tbody) return;
         
@@ -1354,19 +1443,83 @@ class LogisticsManager {
             this.transactions = [];
         }
         
-        const recentTransactions = this.transactions.slice(-20).reverse(); // 최근 20개
+        let transactionsToShow = filteredTransactions || this.transactions.slice(-50).reverse(); // 최근 50개 또는 필터된 결과
         
         tbody.innerHTML = '';
-        recentTransactions.forEach(transaction => {
+        
+        if (transactionsToShow.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">거래 내역이 없습니다.</td></tr>';
+            return;
+        }
+        
+        // 상품별로 그룹화
+        const groupedTransactions = this.groupTransactionsByProduct(transactionsToShow);
+        
+        groupedTransactions.forEach(group => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${transaction.timestamp}</td>
-                <td>${transaction.productName}</td>
-                <td>${transaction.type}</td>
-                <td>${transaction.quantity}</td>
+                <td>${group.timestamp}</td>
+                <td>${group.productName || group.product_name || 'Unknown Product'}</td>
+                <td>${group.type}</td>
+                <td>${group.quantity}</td>
             `;
             tbody.appendChild(row);
         });
+    }
+    
+    // 상품별 거래 그룹화
+    groupTransactionsByProduct(transactions) {
+        const grouped = {};
+        
+        transactions.forEach(transaction => {
+            const productName = transaction.productName || transaction.product_name || 'Unknown Product';
+            const timestamp = transaction.timestamp;
+            const type = transaction.type;
+            const key = `${productName}-${timestamp}-${type}`;
+            
+            if (grouped[key]) {
+                grouped[key].quantity += transaction.quantity;
+            } else {
+                grouped[key] = {
+                    timestamp: timestamp,
+                    productName: productName,
+                    product_name: productName,
+                    type: type,
+                    quantity: transaction.quantity
+                };
+            }
+        });
+        
+        return Object.values(grouped).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
+    
+    // 입출고 내역 필터링
+    filterTransactionHistory() {
+        const yearFilter = document.getElementById('transactionYearFilter');
+        const monthFilter = document.getElementById('transactionMonthFilter');
+        const dayFilter = document.getElementById('transactionDayFilter');
+        
+        const year = yearFilter.value;
+        const month = monthFilter.value;
+        const day = dayFilter.value;
+        
+        if (!year && !month && !day) {
+            // 필터가 없으면 전체 표시
+            this.updateTransactionHistory();
+            return;
+        }
+        
+        const filteredTransactions = this.transactions.filter(transaction => {
+            const transactionDate = new Date(transaction.timestamp);
+            
+            if (year && transactionDate.getFullYear() !== parseInt(year)) return false;
+            if (month && (transactionDate.getMonth() + 1) !== parseInt(month)) return false;
+            if (day && transactionDate.getDate() !== parseInt(day)) return false;
+            
+            return true;
+        });
+        
+        this.updateTransactionHistory(filteredTransactions);
     }
 
     // 포장 바코드 입력 처리
@@ -1435,11 +1588,13 @@ class LogisticsManager {
             return;
         }
         
-        // 재고에서 차감 (포장할 때 재고 차감)
+        // 일반 재고에서 차감 (포장할 때)
         product.quantity -= quantity;
+        console.log(`일반 재고 차감: ${product.name} ${quantity}개 (남은 재고: ${product.quantity}개)`);
         
         // 그로스 포장 수량 증가
         product.gross_qty = (product.gross_qty || 0) + quantity;
+        console.log(`그로스 포장 증가: ${product.name} ${quantity}개 (총 그로스 포장: ${product.gross_qty}개)`);
         
         // 포장 기록 추가
         const packingRecord = {
@@ -1489,9 +1644,12 @@ class LogisticsManager {
             record.shippedAt = new Date().toLocaleString('ko-KR');
             
             // 그로스 포장 수량에서 차감
-            const product = this.inventory.find(p => p.id === record.productId);
+            const product = this.inventory.find(p => p.id === (record.product_id || record.productId));
             if (product && product.gross_qty >= record.quantity) {
                 product.gross_qty -= record.quantity;
+                console.log(`출고 처리: ${product.name} 그로스 포장 ${record.quantity}개 차감`);
+            } else {
+                console.error('출고 처리 실패:', { productId: record.product_id || record.productId, product, record });
             }
         });
         
@@ -1507,8 +1665,8 @@ class LogisticsManager {
         }
     }
 
-    // 포장 내역 업데이트
-    updatePackingHistory() {
+    // 포장 내역 업데이트 (필터링 지원)
+    updatePackingHistory(filteredRecords = null) {
         const tbody = document.querySelector('#packingTable tbody');
         if (!tbody) return;
         
@@ -1517,14 +1675,20 @@ class LogisticsManager {
             this.packingRecords = [];
         }
         
-        const recentRecords = this.packingRecords.slice(-20).reverse(); // 최근 20개
+        let recordsToShow = filteredRecords || this.packingRecords.slice(-50).reverse(); // 최근 50개 또는 필터된 결과
         
         tbody.innerHTML = '';
-        recentRecords.forEach(record => {
+        
+        if (recordsToShow.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">포장 내역이 없습니다.</td></tr>';
+            return;
+        }
+        
+        recordsToShow.forEach(record => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${record.timestamp}</td>
-                <td>${record.productName}</td>
+                <td>${record.productName || record.product_name || 'Unknown Product'}</td>
                 <td>
                     <span class="status-badge ${record.status === '포장완료' ? 'status-packed' : 'status-shipped'}">
                         ${record.status}
@@ -1543,6 +1707,35 @@ class LogisticsManager {
             tbody.appendChild(row);
         });
     }
+    
+    // 포장 내역 필터링
+    filterPackingHistory() {
+        const yearFilter = document.getElementById('packingYearFilter');
+        const monthFilter = document.getElementById('packingMonthFilter');
+        const dayFilter = document.getElementById('packingDayFilter');
+        
+        const year = yearFilter.value;
+        const month = monthFilter.value;
+        const day = dayFilter.value;
+        
+        if (!year && !month && !day) {
+            // 필터가 없으면 전체 표시
+            this.updatePackingHistory();
+            return;
+        }
+        
+        const filteredRecords = this.packingRecords.filter(record => {
+            const recordDate = new Date(record.timestamp);
+            
+            if (year && recordDate.getFullYear() !== parseInt(year)) return false;
+            if (month && (recordDate.getMonth() + 1) !== parseInt(month)) return false;
+            if (day && recordDate.getDate() !== parseInt(day)) return false;
+            
+            return true;
+        });
+        
+        this.updatePackingHistory(filteredRecords);
+    }
 
     // 단일 상품 출고
     async shipSingleItem(recordId) {
@@ -1553,9 +1746,10 @@ class LogisticsManager {
         record.shippedAt = new Date().toLocaleString('ko-KR');
         
         // 그로스 포장 수량에서 차감
-        const product = this.inventory.find(p => p.id === record.productId);
+        const product = this.inventory.find(p => p.id === (record.product_id || record.productId));
         if (product && product.gross_qty >= record.quantity) {
             product.gross_qty -= record.quantity;
+            console.log(`단일 출고 처리: ${product.name} 그로스 포장 ${record.quantity}개 차감`);
         }
         
         try {
