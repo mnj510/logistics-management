@@ -358,6 +358,14 @@ class LogisticsManager {
         document.getElementById('filterTransactionBtn').addEventListener('click', () => this.filterTransactionHistory());
         document.getElementById('filterPackingBtn').addEventListener('click', () => this.filterPackingHistory());
         
+        // 상품별 내역 필터 버튼
+        document.getElementById('filterProductHistoryBtn').addEventListener('click', () => this.updateProductHistoryDisplay());
+        document.getElementById('clearProductHistoryFilterBtn').addEventListener('click', () => {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            this.updateProductHistoryDisplay();
+        });
+        
         // 데이터 새로고침 기능 (5초마다 자동 새로고침)
         setInterval(() => this.refreshData(), 5000);
 
@@ -1124,6 +1132,9 @@ class LogisticsManager {
                     <button class="btn btn-danger" onclick="logisticsManager.deleteProduct(${product.id})">
                         <i class="fas fa-trash"></i>
                     </button>
+                    <button class="btn btn-secondary" onclick="logisticsManager.showProductHistory(${product.id})">
+                        <i class="fas fa-history"></i>
+                    </button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -1135,9 +1146,91 @@ class LogisticsManager {
         if (confirm('정말로 이 상품을 삭제하시겠습니까?')) {
             this.inventory = this.inventory.filter(product => product.id !== id);
             this.saveData();
-            this.updateInventoryDisplay();
-            this.updateProductSelectors();
+                    this.updateInventoryDisplay();
+        this.updateProductSelectors();
+    }
+
+    // 상품별 입출고 내역 표시
+    showProductHistory(productId) {
+        const product = this.inventory.find(p => p.id === productId);
+        if (!product) {
+            alert('상품을 찾을 수 없습니다.');
+            return;
         }
+
+        // 모달 제목 설정
+        document.getElementById('productHistoryModalTitle').textContent = `${product.name} 입출고 내역`;
+        
+        // 날짜 필터 초기화 (오늘 날짜로 설정)
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('endDate').value = today;
+        
+        // 해당 상품의 입출고 내역 필터링
+        this.currentProductHistory = productId;
+        this.updateProductHistoryDisplay();
+        
+        // 모달 표시
+        document.getElementById('productHistoryModal').style.display = 'block';
+    }
+
+    // 상품별 입출고 내역 업데이트
+    updateProductHistoryDisplay() {
+        const tbody = document.querySelector('#productHistoryTable tbody');
+        if (!tbody) return;
+
+        // 해당 상품의 거래 내역만 필터링
+        let productTransactions = this.transactions.filter(transaction => 
+            transaction.productId === this.currentProductHistory
+        );
+
+        // 날짜 필터 적용
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (startDate && endDate) {
+            productTransactions = productTransactions.filter(transaction => {
+                const transactionDate = this.parseKoreanDate(transaction.timestamp);
+                if (!transactionDate) return false;
+                
+                const transactionDateStr = transactionDate.toISOString().split('T')[0];
+                return transactionDateStr >= startDate && transactionDateStr <= endDate;
+            });
+        }
+
+        // 최신순으로 정렬
+        productTransactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        tbody.innerHTML = '';
+
+        if (productTransactions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">해당 기간의 입출고 내역이 없습니다.</td></tr>';
+            return;
+        }
+
+        productTransactions.forEach(transaction => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${transaction.timestamp}</td>
+                <td>${transaction.productName || transaction.product_name}</td>
+                <td>${transaction.type}</td>
+                <td>${transaction.quantity}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 한국 날짜 형식 파싱
+    parseKoreanDate(dateStr) {
+        const match = dateStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
+        if (!match) return null;
+        
+        const year = parseInt(match[1]);
+        const month = parseInt(match[2]) - 1; // JavaScript 월은 0부터 시작
+        const day = parseInt(match[3]);
+        
+        return new Date(year, month, day);
+    }
     }
 
     // 상품 선택기 업데이트 (현재 선택값 보존)
@@ -1357,7 +1450,8 @@ class LogisticsManager {
                     product.quantity -= item.quantity;
                 }
                 
-                // 거래 기록 추가 (각 상품별로 개별 기록)
+                // 거래 기록 추가 (각 상품별로 개별 기록, 현재 시간으로)
+                const currentTime = new Date().toLocaleString('ko-KR');
                 const transaction = {
                     id: Date.now() + Math.random(), // 고유 ID 생성
                     productId: product.id,
@@ -1365,11 +1459,11 @@ class LogisticsManager {
                     product_name: product.name, // Supabase 호환성
                     type: type === 'in' ? '입고' : '출고',
                     quantity: item.quantity,
-                    timestamp: new Date().toLocaleString('ko-KR')
+                    timestamp: currentTime
                 };
                 
                 this.transactions.push(transaction);
-                console.log(`거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${item.quantity}개`);
+                console.log(`일괄 거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${item.quantity}개 (${currentTime})`);
             }
             
             await this.saveData();
@@ -1534,6 +1628,9 @@ class LogisticsManager {
         const month = monthFilter.value;
         const day = dayFilter.value;
         
+        console.log('입출고 내역 필터링:', { year, month, day });
+        console.log('전체 거래 데이터:', this.transactions);
+        
         if (!year && !month && !day) {
             // 필터가 없으면 전체 표시
             this.updateTransactionHistory();
@@ -1541,15 +1638,31 @@ class LogisticsManager {
         }
         
         const filteredTransactions = this.transactions.filter(transaction => {
-            const transactionDate = new Date(transaction.timestamp);
+            // 한국 시간 형식 (2025. 8. 29. 오후 3:30:45) 파싱
+            const timestampStr = transaction.timestamp;
+            console.log('거래 타임스탬프:', timestampStr);
             
-            if (year && transactionDate.getFullYear() !== parseInt(year)) return false;
-            if (month && (transactionDate.getMonth() + 1) !== parseInt(month)) return false;
-            if (day && transactionDate.getDate() !== parseInt(day)) return false;
+            // 날짜 부분만 추출 (2025. 8. 29.)
+            const dateMatch = timestampStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
+            if (!dateMatch) {
+                console.log('날짜 파싱 실패:', timestampStr);
+                return false;
+            }
+            
+            const transactionYear = parseInt(dateMatch[1]);
+            const transactionMonth = parseInt(dateMatch[2]);
+            const transactionDay = parseInt(dateMatch[3]);
+            
+            console.log('파싱된 날짜:', { transactionYear, transactionMonth, transactionDay });
+            
+            if (year && transactionYear !== parseInt(year)) return false;
+            if (month && transactionMonth !== parseInt(month)) return false;
+            if (day && transactionDay !== parseInt(day)) return false;
             
             return true;
         });
         
+        console.log('필터링된 거래:', filteredTransactions);
         this.updateTransactionHistory(filteredTransactions);
     }
 

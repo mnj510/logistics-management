@@ -701,6 +701,71 @@ tbody tr:hover {
     background: #a1a1a1;
 }
 
+/* 상품별 내역 모달 스타일 */
+.date-filter-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.date-filter-section h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.date-range-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.date-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.date-input-group label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.date-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.product-history-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.product-history-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.product-history-table-container th,
+.product-history-table-container td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.product-history-table-container th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
 .form-group {
     margin-bottom: 20px;
 }

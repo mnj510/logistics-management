@@ -405,6 +405,42 @@
         </div>
     </div>
 
+    <!-- 상품별 입출고 내역 모달 -->
+    <div class="modal" id="productHistoryModal">
+        <div class="modal-content" style="width: 90%; max-width: 1000px;">
+            <span class="close" id="productHistoryModalClose">&times;</span>
+            <h2 id="productHistoryModalTitle">상품별 입출고 내역</h2>
+            <div class="date-filter-section">
+                <h3>날짜 범위 설정</h3>
+                <div class="date-range-controls">
+                    <div class="date-input-group">
+                        <label>시작 날짜:</label>
+                        <input type="date" id="startDate" class="date-input">
+                    </div>
+                    <div class="date-input-group">
+                        <label>종료 날짜:</label>
+                        <input type="date" id="endDate" class="date-input">
+                    </div>
+                    <button class="btn btn-info" id="filterProductHistoryBtn">필터 적용</button>
+                    <button class="btn btn-secondary" id="clearProductHistoryFilterBtn">전체 보기</button>
+                </div>
+            </div>
+            <div class="product-history-table-container">
+                <table id="productHistoryTable">
+                    <thead>
+                        <tr>
+                            <th>날짜/시간</th>
+                            <th>상품명</th>
+                            <th>유형</th>
+                            <th>수량</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js?v=1.2"></script>
 </body>
 </html>
