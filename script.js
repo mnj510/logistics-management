@@ -525,27 +525,21 @@ class LogisticsManager {
         const currentMonth = now.getMonth() + 1;
         const currentDay = now.getDate();
         
-        // 년도 필터 (2025-2035년)
+        // 년도 필터 (2025-2035년) - 기본값은 전체로 설정
         yearFilter.innerHTML = '<option value="">전체 년도</option>';
         for (let year = 2025; year <= 2035; year++) {
             const option = document.createElement('option');
             option.value = year;
             option.textContent = `${year}년`;
-            if (year === currentYear) {
-                option.selected = true; // 현재 년도 자동 선택
-            }
             yearFilter.appendChild(option);
         }
         
-        // 월 필터
+        // 월 필터 - 기본값은 전체로 설정
         monthFilter.innerHTML = '<option value="">전체 월</option>';
         for (let month = 1; month <= 12; month++) {
             const option = document.createElement('option');
             option.value = month;
             option.textContent = `${month}월`;
-            if (month === currentMonth) {
-                option.selected = true; // 현재 월 자동 선택
-            }
             monthFilter.appendChild(option);
         }
         
@@ -558,7 +552,7 @@ class LogisticsManager {
             dayFilter.appendChild(option);
         }
         
-        console.log(`포장 내역 필터 초기화: ${currentYear}년 ${currentMonth}월로 자동 설정`);
+        console.log(`포장 내역 필터 초기화: 전체 기간으로 설정`);
     }
 
     // 날짜/시간 선택기 초기화
@@ -1650,10 +1644,16 @@ class LogisticsManager {
 
     // 출고 처리
     async processShipping() {
+        console.log('출고 처리 시작');
+        console.log('전체 포장 기록:', this.packingRecords);
+        
         const packingRecords = this.packingRecords.filter(record => record.status === '포장완료');
+        console.log('포장완료 상태 기록:', packingRecords);
         
         if (packingRecords.length === 0) {
-            alert('출고할 포장 상품이 없습니다.');
+            console.log('출고할 포장 상품이 없음');
+            alert('출고할 포장 상품이 없습니다.\n\n현재 포장 기록 상태:\n' + 
+                  this.packingRecords.map(r => `- ${r.productName || r.product_name}: ${r.status}`).join('\n'));
             return;
         }
         
@@ -1694,7 +1694,13 @@ class LogisticsManager {
             this.packingRecords = [];
         }
         
-        let recordsToShow = filteredRecords || this.packingRecords.slice(-50).reverse(); // 최근 50개 또는 필터된 결과
+        console.log('포장 내역 업데이트:', { 
+            totalRecords: this.packingRecords.length, 
+            filteredRecords: filteredRecords ? filteredRecords.length : null,
+            records: this.packingRecords 
+        });
+        
+        let recordsToShow = filteredRecords || this.packingRecords.slice(-3).reverse(); // 최근 3개만 표시
         
         tbody.innerHTML = '';
         

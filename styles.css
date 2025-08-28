@@ -636,6 +636,45 @@ tbody tr:hover {
     font-size: 0.9rem;
 }
 
+/* 포장 내역 테이블 스크롤 */
+.packing-history {
+    margin-top: 30px;
+}
+
+.packing-history table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.packing-history .table-container {
+    max-height: 200px; /* 3줄 정도 높이 */
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.packing-history .table-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.packing-history .table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.packing-history .table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.packing-history .table-container::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
 .form-group {
     margin-bottom: 20px;
 }
