@@ -154,16 +154,25 @@ class LogisticsManager {
     async saveToSupabase() {
         try {
             // 각 테이블에 데이터 저장 (upsert 사용)
-            await Promise.all([
-                this.syncTableData('attendance_records', this.attendanceRecords),
-                this.syncTableData('inventory', this.inventory),
-                this.syncTableData('transactions', this.transactions),
-                this.syncTableData('packing_records', this.packingRecords),
-                this.syncTableData('tasks', this.tasks)
-            ]);
+            if (this.attendanceRecords.length > 0) {
+                await this.syncTableData('attendance_records', this.attendanceRecords);
+            }
+            if (this.inventory.length > 0) {
+                await this.syncTableData('inventory', this.inventory);
+            }
+            if (this.transactions.length > 0) {
+                await this.syncTableData('transactions', this.transactions);
+            }
+            if (this.packingRecords.length > 0) {
+                await this.syncTableData('packing_records', this.packingRecords);
+            }
+            if (this.tasks.length > 0) {
+                await this.syncTableData('tasks', this.tasks);
+            }
             
             // 로컬 스토리지에도 백업 저장
             this.saveToLocalStorage();
+            console.log('Supabase 동기화 완료');
         } catch (error) {
             console.error('Supabase에 데이터 저장 실패:', error);
             this.saveToLocalStorage(); // fallback to localStorage
@@ -173,12 +182,23 @@ class LogisticsManager {
     async syncTableData(tableName, data) {
         if (!data || data.length === 0) return;
         
-        const { error } = await this.supabase
-            .from(tableName)
-            .upsert(data, { onConflict: 'id' });
-            
-        if (error) {
-            console.error(`${tableName} 동기화 실패:`, error);
+        try {
+            const { data: result, error } = await this.supabase
+                .from(tableName)
+                .upsert(data, { 
+                    onConflict: 'id',
+                    ignoreDuplicates: false 
+                });
+                
+            if (error) {
+                console.error(`${tableName} 동기화 실패:`, error);
+                throw error;
+            } else {
+                console.log(`${tableName} 동기화 성공:`, result);
+            }
+        } catch (error) {
+            console.error(`${tableName} 동기화 중 오류:`, error);
+            throw error;
         }
     }
 
@@ -372,9 +392,11 @@ class LogisticsManager {
     }
 
     // 출근 처리
-    checkIn() {
+    async checkIn() {
         const selectedTime = document.getElementById('attendanceTime').value;
         const today = new Date().toISOString().split('T')[0];
+        
+        console.log('출근 처리 시작:', { selectedTime, today });
         
         // 오늘 이미 출근했는지 확인
         const existingRecord = this.attendanceRecords.find(record => 
@@ -386,41 +408,40 @@ class LogisticsManager {
             return;
         }
         
-        if (existingRecord && existingRecord.checkOut) {
-            // 이미 퇴근한 경우 새로운 출근 기록 생성
-            const newRecord = {
-                id: Date.now(),
-                date: today,
-                checkIn: selectedTime,
-                checkOut: null,
-                workHours: 0
-            };
-            this.attendanceRecords.push(newRecord);
-        } else {
-            // 새로운 출근 기록
-            const newRecord = {
-                id: Date.now(),
-                date: today,
-                checkIn: selectedTime,
-                checkOut: null,
-                workHours: 0
-            };
-            this.attendanceRecords.push(newRecord);
-        }
+        // 새로운 출근 기록 생성
+        const newRecord = {
+            id: Date.now(),
+            date: today,
+            check_in: selectedTime, // Supabase 테이블 컬럼명에 맞춤
+            check_out: null,
+            work_hours: 0
+        };
         
-        this.saveData();
-        this.updateAttendanceDisplay();
-        alert(`${selectedTime}에 출근 처리되었습니다.`);
+        console.log('새 출근 기록:', newRecord);
+        
+        this.attendanceRecords.push(newRecord);
+        
+        try {
+            await this.saveData();
+            this.updateAttendanceDisplay();
+            alert(`${selectedTime}에 출근 처리되었습니다.`);
+            console.log('출근 처리 완료');
+        } catch (error) {
+            console.error('출근 처리 오류:', error);
+            alert('출근 처리 중 오류가 발생했습니다.');
+        }
     }
 
     // 퇴근 처리
-    checkOut() {
+    async checkOut() {
         const selectedTime = document.getElementById('attendanceTime').value;
         const today = new Date().toISOString().split('T')[0];
         
+        console.log('퇴근 처리 시작:', { selectedTime, today });
+        
         // 오늘 출근했지만 퇴근하지 않은 기록 찾기
         const record = this.attendanceRecords.find(record => 
-            record.date === today && record.checkIn && !record.checkOut
+            record.date === today && (record.checkIn || record.check_in) && !(record.checkOut || record.check_out)
         );
         
         if (!record) {
@@ -428,12 +449,22 @@ class LogisticsManager {
             return;
         }
         
-        record.checkOut = selectedTime;
-        record.workHours = this.calculateWorkHours(record.checkIn, record.checkOut);
+        console.log('퇴근 처리할 기록:', record);
         
-        this.saveData();
-        this.updateAttendanceDisplay();
-        alert(`${selectedTime}에 퇴근 처리되었습니다.`);
+        record.check_out = selectedTime;
+        record.checkOut = selectedTime; // 호환성을 위해 둘 다 설정
+        record.work_hours = this.calculateWorkHours(record.check_in || record.checkIn, selectedTime);
+        record.workHours = record.work_hours; // 호환성을 위해 둘 다 설정
+        
+        try {
+            await this.saveData();
+            this.updateAttendanceDisplay();
+            alert(`${selectedTime}에 퇴근 처리되었습니다.`);
+            console.log('퇴근 처리 완료');
+        } catch (error) {
+            console.error('퇴근 처리 오류:', error);
+            alert('퇴근 처리 중 오류가 발생했습니다.');
+        }
     }
 
     // 근무시간 계산
