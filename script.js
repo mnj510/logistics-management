@@ -449,6 +449,8 @@ class LogisticsManager {
     }
 
     toggleAdminMode(enabled) {
+        console.log('관리자 모드 토글:', { enabled, previousMode: this.isAdminMode });
+        
         this.isAdminMode = enabled;
         const adminBtn = document.getElementById('adminBtn');
         
@@ -456,14 +458,18 @@ class LogisticsManager {
             document.body.classList.add('admin-mode');
             adminBtn.classList.add('active');
             adminBtn.innerHTML = '<i class="fas fa-user-shield"></i> 관리자 모드 (ON)';
+            console.log('관리자 모드 활성화됨');
         } else {
             document.body.classList.remove('admin-mode');
             adminBtn.classList.remove('active');
             adminBtn.innerHTML = '<i class="fas fa-user-shield"></i> 관리자 모드';
+            console.log('관리자 모드 비활성화됨');
         }
         
         this.updateAttendanceDisplay();
         this.updateTaskDisplay();
+        
+        console.log('관리자 모드 토글 완료, 현재 상태:', this.isAdminMode);
     }
 
     // 내역 필터 초기화
@@ -971,19 +977,25 @@ class LogisticsManager {
         filteredRecords.forEach((record, index) => {
             console.log(`레코드 ${index + 1} 처리 중:`, record);
             const row = document.createElement('tr');
+            
+            const deleteButtonHtml = this.isAdminMode ? 
+                `<button class="btn btn-danger" onclick="logisticsManager.deleteAttendanceRecord(${record.id})">
+                    <i class="fas fa-trash"></i>
+                </button>` : '';
+            
             row.innerHTML = `
                 <td>${record.date}</td>
                 <td>${this.formatTime(record.check_in || record.checkIn) || '-'}</td>
                 <td>${this.formatTime(record.check_out || record.checkOut) || '-'}</td>
                 <td>${(record.work_hours || record.workHours) ? this.formatMinutes(record.work_hours || record.workHours) : '-'}</td>
                 <td class="admin-only" style="display: ${this.isAdminMode ? 'table-cell' : 'none'}">
-                    <button class="btn btn-danger" onclick="logisticsManager.deleteAttendanceRecord(${record.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${deleteButtonHtml}
                 </td>
             `;
             tbody.appendChild(row);
         });
+        
+        console.log('출퇴근 기록 표시 완료, 관리자 모드:', this.isAdminMode);
         
         // 통계 계산
         this.updateAttendanceStats(filteredRecords);
@@ -1000,13 +1012,50 @@ class LogisticsManager {
     }
 
     // 출퇴근 기록 삭제 (관리자 전용)
-    deleteAttendanceRecord(id) {
-        if (!this.isAdminMode) return;
+    async deleteAttendanceRecord(id) {
+        console.log('출퇴근 기록 삭제 시도:', { id, isAdminMode: this.isAdminMode });
         
-        if (confirm('정말로 이 기록을 삭제하시겠습니까?')) {
+        if (!this.isAdminMode) {
+            console.log('관리자 모드가 아닙니다. 삭제 불가.');
+            alert('관리자 모드에서만 삭제할 수 있습니다.');
+            return;
+        }
+        
+        if (!confirm('정말로 이 기록을 삭제하시겠습니까?')) {
+            console.log('사용자가 삭제를 취소했습니다.');
+            return;
+        }
+        
+        try {
+            console.log('삭제 전 출퇴근 기록 수:', this.attendanceRecords.length);
+            
+            // 해당 ID의 기록 찾기
+            const recordToDelete = this.attendanceRecords.find(record => record.id === id);
+            if (!recordToDelete) {
+                console.error('삭제할 기록을 찾을 수 없습니다:', id);
+                alert('삭제할 기록을 찾을 수 없습니다.');
+                return;
+            }
+            
+            console.log('삭제할 기록:', recordToDelete);
+            
+            // 기록 삭제
             this.attendanceRecords = this.attendanceRecords.filter(record => record.id !== id);
-            this.saveData();
+            
+            console.log('삭제 후 출퇴근 기록 수:', this.attendanceRecords.length);
+            
+            // 데이터 저장
+            await this.saveData();
+            console.log('출퇴근 기록 삭제 및 데이터 저장 완료');
+            
+            // UI 업데이트
             this.updateAttendanceDisplay();
+            
+            alert('출퇴근 기록이 삭제되었습니다.');
+            
+        } catch (error) {
+            console.error('출퇴근 기록 삭제 오류:', error);
+            alert('출퇴근 기록 삭제 중 오류가 발생했습니다.');
         }
     }
 
