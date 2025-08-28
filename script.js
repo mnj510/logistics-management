@@ -188,9 +188,16 @@ class LogisticsManager {
     }
 
     async saveData() {
+        console.log('saveData 호출됨:', { 
+            hasSupabase: !!this.supabase, 
+            transactionsCount: this.transactions?.length || 0 
+        });
+        
         if (this.supabase) {
+            console.log('Supabase에 데이터 저장 시작');
             await this.saveToSupabase();
         } else {
+            console.log('로컬 스토리지에 데이터 저장');
             this.saveToLocalStorage();
         }
     }
@@ -205,20 +212,33 @@ class LogisticsManager {
 
     async saveToSupabase() {
         try {
+            console.log('saveToSupabase 시작:', {
+                attendanceRecordsCount: this.attendanceRecords?.length || 0,
+                inventoryCount: this.inventory?.length || 0,
+                transactionsCount: this.transactions?.length || 0,
+                packingRecordsCount: this.packingRecords?.length || 0,
+                tasksCount: this.tasks?.length || 0
+            });
+            
             // 각 테이블에 데이터 저장 (upsert 사용)
-            if (this.attendanceRecords.length > 0) {
+            if (this.attendanceRecords && this.attendanceRecords.length > 0) {
+                console.log('attendance_records 동기화 시작');
                 await this.syncTableData('attendance_records', this.attendanceRecords);
             }
-            if (this.inventory.length > 0) {
+            if (this.inventory && this.inventory.length > 0) {
+                console.log('inventory 동기화 시작');
                 await this.syncTableData('inventory', this.inventory);
             }
-            if (this.transactions.length > 0) {
+            if (this.transactions && this.transactions.length > 0) {
+                console.log('transactions 동기화 시작');
                 await this.syncTableData('transactions', this.transactions);
             }
-            if (this.packingRecords.length > 0) {
+            if (this.packingRecords && this.packingRecords.length > 0) {
+                console.log('packing_records 동기화 시작');
                 await this.syncTableData('packing_records', this.packingRecords);
             }
-            if (this.tasks.length > 0) {
+            if (this.tasks && this.tasks.length > 0) {
+                console.log('tasks 동기화 시작');
                 await this.syncTableData('tasks', this.tasks);
             }
             
@@ -1557,8 +1577,11 @@ class LogisticsManager {
                     timestamp: currentTime
                 };
                 
+                console.log('새로운 일괄 거래 기록 생성:', transaction);
+                
                 this.transactions.push(transaction);
                 console.log(`일괄 거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${item.quantity}개 (${currentTime})`);
+                console.log('현재 transactions 배열 상태:', this.transactions);
             }
             
             await this.saveData();
@@ -1635,8 +1658,11 @@ class LogisticsManager {
             timestamp: new Date().toLocaleString('ko-KR')
         };
         
+        console.log('새로운 거래 기록 생성:', transaction);
+        
         this.transactions.push(transaction);
         console.log(`개별 거래 기록 추가: ${product.name} ${type === 'in' ? '입고' : '출고'} ${quantity}개`);
+        console.log('현재 transactions 배열 상태:', this.transactions);
         
         try {
             await this.saveData();
