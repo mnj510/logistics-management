@@ -161,6 +161,18 @@ class LogisticsManager {
             
             console.log('로드된 출퇴근 기록:', this.attendanceRecords);
             
+            // 데이터 로드 후 즉시 UI 업데이트
+            setTimeout(() => {
+                console.log('UI 업데이트 시작...');
+                this.updateAttendanceDisplay();
+                this.updateInventoryDisplay();
+                this.updateTransactionHistory();
+                this.updatePackingHistory();
+                this.updateTaskDisplay();
+                this.updateProductSelectors();
+                console.log('UI 업데이트 완료');
+            }, 100);
+            
         } catch (error) {
             console.error('Supabase에서 데이터 로드 실패:', error);
             this.loadFromLocalStorage(); // fallback to localStorage
@@ -435,7 +447,8 @@ class LogisticsManager {
             option.textContent = `${year}년`;
             yearFilter.appendChild(option);
         }
-        yearFilter.value = currentYear;
+        // 초기값을 "전체"로 설정하여 모든 데이터 표시
+        yearFilter.value = '';
 
         // 월 필터
         monthFilter.innerHTML = '<option value="">전체</option>';
@@ -445,7 +458,8 @@ class LogisticsManager {
             option.textContent = `${month}월`;
             monthFilter.appendChild(option);
         }
-        monthFilter.value = new Date().getMonth() + 1;
+        // 초기값을 "전체"로 설정
+        monthFilter.value = '';
 
         // 일 필터
         this.updateDayFilter();
@@ -594,14 +608,22 @@ class LogisticsManager {
 
     // 출퇴근 기록 표시 업데이트
     updateAttendanceDisplay() {
+        console.log('updateAttendanceDisplay 시작, 데이터:', this.attendanceRecords);
+        
         const tbody = document.querySelector('#attendanceTable tbody');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('출퇴근 테이블 tbody를 찾을 수 없음');
+            return;
+        }
         
         const yearFilter = document.getElementById('yearFilter');
         const monthFilter = document.getElementById('monthFilter');
         const dayFilter = document.getElementById('dayFilter');
         
-        if (!yearFilter || !monthFilter || !dayFilter) return;
+        if (!yearFilter || !monthFilter || !dayFilter) {
+            console.error('날짜 필터 요소를 찾을 수 없음');
+            return;
+        }
         
         // 데이터가 아직 로드되지 않았으면 빈 배열로 초기화
         if (!this.attendanceRecords) {
@@ -609,18 +631,27 @@ class LogisticsManager {
         }
         
         let filteredRecords = this.attendanceRecords;
+        console.log('필터링 전 레코드 수:', filteredRecords.length);
         
         // 필터 적용
-        if (yearFilter || monthFilter || dayFilter) {
+        const yearValue = yearFilter.value;
+        const monthValue = monthFilter.value;
+        const dayValue = dayFilter.value;
+        
+        console.log('필터 값들:', { yearValue, monthValue, dayValue });
+        
+        if (yearValue || monthValue || dayValue) {
             filteredRecords = this.attendanceRecords.filter(record => {
                 const recordDate = new Date(record.date);
                 const recordYear = recordDate.getFullYear();
                 const recordMonth = recordDate.getMonth() + 1;
                 const recordDay = recordDate.getDate();
                 
-                if (yearFilter && recordYear !== parseInt(yearFilter)) return false;
-                if (monthFilter && recordMonth !== parseInt(monthFilter)) return false;
-                if (dayFilter && recordDay !== parseInt(dayFilter)) return false;
+                console.log('레코드 날짜 정보:', { record: record.date, recordYear, recordMonth, recordDay });
+                
+                if (yearValue && recordYear !== parseInt(yearValue)) return false;
+                if (monthValue && recordMonth !== parseInt(monthValue)) return false;
+                if (dayValue && recordDay !== parseInt(dayValue)) return false;
                 
                 return true;
             });
@@ -629,8 +660,20 @@ class LogisticsManager {
         // 최신 순으로 정렬
         filteredRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
         
+        console.log('필터링 후 레코드 수:', filteredRecords.length);
+        console.log('필터링된 레코드들:', filteredRecords);
+        
         tbody.innerHTML = '';
-        filteredRecords.forEach(record => {
+        
+        if (filteredRecords.length === 0) {
+            console.log('표시할 출퇴근 기록이 없음');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">출퇴근 기록이 없습니다.</td></tr>';
+        } else {
+            console.log('출퇴근 기록 테이블 생성 시작');
+        }
+        
+        filteredRecords.forEach((record, index) => {
+            console.log(`레코드 ${index + 1} 처리 중:`, record);
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${record.date}</td>
