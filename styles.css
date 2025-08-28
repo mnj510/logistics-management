@@ -146,12 +146,18 @@ body {
     margin-bottom: 30px;
     padding-bottom: 15px;
     border-bottom: 3px solid #3498db;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .section-header h1 {
     color: #2c3e50;
     font-size: 2rem;
     font-weight: 600;
+    flex: 1;
 }
 
 /* 버튼 스타일 */

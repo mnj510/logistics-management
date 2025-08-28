@@ -129,19 +129,38 @@ class LogisticsManager {
 
     async loadFromSupabase() {
         try {
+            console.log('Supabase에서 데이터 로드 시작...');
+            
             const [attendance, inventory, transactions, packing, tasks] = await Promise.all([
-                this.supabase.from('attendance_records').select('*'),
+                this.supabase.from('attendance_records').select('*').order('date', { ascending: false }),
                 this.supabase.from('inventory').select('*'),
-                this.supabase.from('transactions').select('*'),
-                this.supabase.from('packing_records').select('*'),
+                this.supabase.from('transactions').select('*').order('created_at', { ascending: false }),
+                this.supabase.from('packing_records').select('*').order('created_at', { ascending: false }),
                 this.supabase.from('tasks').select('*')
             ]);
+
+            console.log('Supabase 데이터 로드 결과:', {
+                attendance: attendance.data?.length || 0,
+                inventory: inventory.data?.length || 0,
+                transactions: transactions.data?.length || 0,
+                packing: packing.data?.length || 0,
+                tasks: tasks.data?.length || 0
+            });
+
+            if (attendance.error) console.error('출퇴근 데이터 로드 오류:', attendance.error);
+            if (inventory.error) console.error('재고 데이터 로드 오류:', inventory.error);
+            if (transactions.error) console.error('거래 데이터 로드 오류:', transactions.error);
+            if (packing.error) console.error('포장 데이터 로드 오류:', packing.error);
+            if (tasks.error) console.error('업무 데이터 로드 오류:', tasks.error);
 
             this.attendanceRecords = attendance.data || [];
             this.inventory = inventory.data || [];
             this.transactions = transactions.data || [];
             this.packingRecords = packing.data || [];
             this.tasks = tasks.data || [];
+            
+            console.log('로드된 출퇴근 기록:', this.attendanceRecords);
+            
         } catch (error) {
             console.error('Supabase에서 데이터 로드 실패:', error);
             this.loadFromLocalStorage(); // fallback to localStorage
@@ -263,6 +282,10 @@ class LogisticsManager {
         document.getElementById('checkInBtn').addEventListener('click', () => this.checkIn());
         document.getElementById('checkOutBtn').addEventListener('click', () => this.checkOut());
         document.getElementById('filterBtn').addEventListener('click', () => this.filterAttendance());
+        document.getElementById('refreshBtn').addEventListener('click', () => this.refreshData());
+        
+        // 데이터 새로고침 기능 (5초마다 자동 새로고침)
+        setInterval(() => this.refreshData(), 5000);
 
         // 재고 관리
         document.getElementById('addProductBtn').addEventListener('click', () => this.showProductModal());
@@ -1073,6 +1096,24 @@ class LogisticsManager {
             this.tasks = this.tasks.filter(task => task.id !== id);
             this.saveData();
             this.updateTaskDisplay();
+        }
+    }
+
+    // 데이터 새로고침
+    async refreshData() {
+        if (this.supabase) {
+            try {
+                console.log('데이터 새로고침 중...');
+                await this.loadFromSupabase();
+                this.updateAttendanceDisplay();
+                this.updateInventoryDisplay();
+                this.updateTransactionHistory();
+                this.updatePackingHistory();
+                this.updateTaskDisplay();
+                this.updateProductSelectors();
+            } catch (error) {
+                console.error('데이터 새로고침 실패:', error);
+            }
         }
     }
 }
