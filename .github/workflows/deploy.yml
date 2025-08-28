@@ -1,28 +1,16 @@
-name: Deploy to GitHub Pages
+# GitHub Pages는 Settings에서 직접 설정하므로 이 파일은 필요하지 않습니다.
+# 하지만 나중에 고급 기능을 위해 보관합니다.
+
+name: Deploy to GitHub Pages (Disabled)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch: # 수동 실행만 허용
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: false # 비활성화
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      if: github.ref == 'refs/heads/main'
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
-        exclude_assets: '.github,README.md'
